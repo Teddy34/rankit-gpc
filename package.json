@@ -1,0 +1,37 @@
+{
+  "name": "rankit-gpc",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "admin": "node --env-file-if-exists=.env.local --import tsx src/cli/admin.ts",
+    "db:ops": "node --env-file-if-exists=.env.local --import tsx src/cli/database.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --import tsx src/db/migrate.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.1",
+    "drizzle-orm": "0.45.2",
+    "next": "16.2.11",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "drizzle-kit": "^0.31.9",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.2.11",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "4.1.10"
+  }
+}
