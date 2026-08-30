@@ -10,7 +10,7 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   const currentUser = await requireUser();
   const one = alias(users, "player_one");
   const two = alias(users, "player_two");
-  const history = db.select({ game: games, one, two }).from(games)
+  const history = await db.select({ game: games, one, two }).from(games)
     .innerJoin(one, eq(games.playerOneId, one.id)).innerJoin(two, eq(games.playerTwoId, two.id))
     .where(isNull(games.deletedAt)).orderBy(desc(games.playedOn), desc(games.sequence)).all();
   const { registered, deleted } = await searchParams;

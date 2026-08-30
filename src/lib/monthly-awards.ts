@@ -6,17 +6,17 @@ import { games, monthlyAwards, users } from "@/db/schema";
 import { awardLevelForStreak, brusselsMonth, monthsAfter, previousMonth } from "@/domain/monthly-award";
 import { replayRatings } from "@/domain/rating-replay";
 
-function awardLeaderForMonth(awardMonth: string) {
-  const eligiblePlayers = db.select().from(users).all().filter((player) =>
+async function awardLeaderForMonth(awardMonth: string) {
+  const eligiblePlayers = (await db.select().from(users).all()).filter((player) =>
     brusselsMonth(player.createdAt) < awardMonth &&
     (!player.retiredAt || brusselsMonth(player.retiredAt) >= awardMonth),
   );
   if (eligiblePlayers.length === 0) return null;
 
   const eligibleIds = new Set(eligiblePlayers.map((player) => player.id));
-  const historicalGames = db.select().from(games)
+  const historicalGames = (await db.select().from(games)
     .where(and(lt(games.playedOn, `${awardMonth}-01`), isNull(games.deletedAt)))
-    .all()
+    .all())
     .filter((game) => eligibleIds.has(game.playerOneId) && eligibleIds.has(game.playerTwoId));
   const names = new Map(eligiblePlayers.map((player) => [player.id, player.displayName]));
   const replay = replayRatings(
@@ -37,16 +37,16 @@ function awardLeaderForMonth(awardMonth: string) {
   )[0];
 }
 
-export function ensureMonthlyAwards(now = new Date()): void {
+export async function ensureMonthlyAwards(now = new Date()): Promise<void> {
   const currentMonth = brusselsMonth(now);
-  const latest = db.select().from(monthlyAwards).orderBy(desc(monthlyAwards.awardMonth)).limit(1).get();
+  const latest = await db.select().from(monthlyAwards).orderBy(desc(monthlyAwards.awardMonth)).limit(1).get();
   for (const awardMonth of monthsAfter(latest?.awardMonth ?? null, currentMonth)) {
-    if (db.select({ id: monthlyAwards.id }).from(monthlyAwards).where(eq(monthlyAwards.awardMonth, awardMonth)).get()) continue;
-    const winner = awardLeaderForMonth(awardMonth);
+    if (await db.select({ id: monthlyAwards.id }).from(monthlyAwards).where(eq(monthlyAwards.awardMonth, awardMonth)).get()) continue;
+    const winner = await awardLeaderForMonth(awardMonth);
     if (!winner) continue;
-    const previous = db.select().from(monthlyAwards).where(eq(monthlyAwards.awardMonth, previousMonth(awardMonth))).get();
+    const previous = await db.select().from(monthlyAwards).where(eq(monthlyAwards.awardMonth, previousMonth(awardMonth))).get();
     const streak = previous?.userId === winner.id ? previous.streak + 1 : 1;
-    db.insert(monthlyAwards).values({
+    await db.insert(monthlyAwards).values({
       awardMonth,
       userId: winner.id,
       streak,
@@ -55,8 +55,8 @@ export function ensureMonthlyAwards(now = new Date()): void {
   }
 }
 
-export function awardsByPlayer(): Map<number, Array<"bronze" | "silver" | "gold">> {
-  const awards = db.select().from(monthlyAwards).orderBy(asc(monthlyAwards.awardMonth)).all();
+export async function awardsByPlayer(): Promise<Map<number, Array<"bronze" | "silver" | "gold">>> {
+  const awards = await db.select().from(monthlyAwards).orderBy(asc(monthlyAwards.awardMonth)).all();
   const grouped = new Map<number, Array<"bronze" | "silver" | "gold">>();
   for (const award of awards) grouped.set(award.userId, [...(grouped.get(award.userId) ?? []), award.level]);
   return grouped;

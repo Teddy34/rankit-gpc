@@ -1,6 +1,6 @@
 # GeoPostcodes Ranking
 
-Internal pool Elo ladder built with Next.js and SQLite.
+Internal pool Elo ladder built with Next.js and libSQL. Local development uses SQLite; deployed environments can use Turso.
 
 See [Implementation status](docs/implementation-status.md) for completed features, remaining work, and deliberate exclusions.
 
@@ -14,6 +14,25 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. In the default development configuration, sign-in emails are not sent externally: the magic-link URL is printed in the terminal running Next.js.
+
+## Turso deployment
+
+Keep `DATABASE_URL=./data/rankit.sqlite` for local development. Set these secrets in each non-local environment that should use Turso:
+
+```dotenv
+TURSO_DATABASE_URL=libsql://your-database.turso.io
+TURSO_AUTH_TOKEN=your-token
+```
+
+`TURSO_DATABASE_URL` takes precedence over `DATABASE_URL`. Apply the checked-in Drizzle migrations to Turso before starting the application:
+
+```sh
+TURSO_DATABASE_URL="libsql://your-database.turso.io" \
+TURSO_AUTH_TOKEN="your-token" \
+npm run db:migrate
+```
+
+Store both values as encrypted environment variables in the deployment platform. Never commit the token or place it in a `NEXT_PUBLIC_` variable.
 
 ## Real email with Resend
 
@@ -45,14 +64,14 @@ The command uses `DATABASE_URL` from the environment or `.env.local`, performs a
 
 ## Database backups
 
-Create, verify, and list consistent SQLite backups:
+Create, verify, and list consistent local SQLite backups:
 
 ```sh
 make backup
 make backups
 ```
 
-Backups are written to `BACKUP_DIR` (default: `./backups`), which must be outside the live database directory. Managed backups older than `BACKUP_RETENTION_DAYS` (default: seven days) are removed after a successful backup. In production, mount `BACKUP_DIR` on storage with an independent lifecycle from the live database volume.
+Backups are written to `BACKUP_DIR` (default: `./backups`), which must be outside the live database directory. Managed backups older than `BACKUP_RETENTION_DAYS` (default: seven days) are removed after a successful backup. These commands reject remote Turso URLs; use Turso's backup and point-in-time recovery features for deployed databases.
 
 To restore, first stop the application so no process has the SQLite database open. Then choose a filename shown by `make backups` and provide the explicit confirmation:
 

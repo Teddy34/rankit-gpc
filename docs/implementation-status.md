@@ -12,7 +12,8 @@ Status: Version 1.0.0 development
 - Live fire badges for players with at least three consecutive wins
 - Persistent monthly bronze, silver, and gold leader awards
 - Administrator audit-log interface
-- SQLite migrations, WAL mode, backup/list/restore Make commands, and seven-day retention
+- libSQL migrations with local SQLite and remote Turso support
+- Local SQLite backup/list/restore Make commands with seven-day retention
 - Standalone Docker image and Docker Compose deployment
 - Automatic container-start database migrations
 - Database-aware `/api/health` health check

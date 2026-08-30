@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    db.run(sql`select 1`);
+    await db.run(sql`select 1`);
     return NextResponse.json({ status: "ok" });
   } catch {
     return NextResponse.json({ status: "unhealthy" }, { status: 503 });

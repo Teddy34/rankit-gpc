@@ -25,7 +25,7 @@ export function createToken(): string {
 export async function createSession(userId: number): Promise<void> {
   const token = createToken();
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  db.insert(sessions).values({ userId, tokenHash: hashToken(token), expiresAt }).run();
+  await db.insert(sessions).values({ userId, tokenHash: hashToken(token), expiresAt }).run();
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -39,7 +39,7 @@ export async function createSession(userId: number): Promise<void> {
 export async function deleteSession(): Promise<void> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (token) db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token))).run();
+  if (token) await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token))).run();
   cookieStore.delete(SESSION_COOKIE);
 }
 
@@ -47,7 +47,7 @@ export async function getCurrentUser() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const row = db
+  const row = await db
     .select({ user: users })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))

@@ -2,7 +2,11 @@ import Database from "better-sqlite3";
 import { mkdir, readdir, realpath, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
-const databasePath = resolve(process.env.DATABASE_URL ?? "./data/rankit.sqlite");
+const configuredDatabaseUrl = process.env.TURSO_DATABASE_URL ?? process.env.DATABASE_URL ?? "./data/rankit.sqlite";
+const localDatabaseUrl = configuredDatabaseUrl.startsWith("file:")
+  ? configuredDatabaseUrl.slice("file:".length)
+  : configuredDatabaseUrl;
+const databasePath = resolve(localDatabaseUrl);
 const backupDirectory = resolve(process.env.BACKUP_DIR ?? "./backups");
 const retentionDays = Number(process.env.BACKUP_RETENTION_DAYS ?? "7");
 const backupPattern = /^rankit-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z(?:-pre-restore)?\.sqlite$/;
@@ -17,7 +21,12 @@ function timestamp(): string {
 }
 
 function assertConfiguration(): void {
-  if (process.env.DATABASE_URL === ":memory:") fail("database operations are unavailable for an in-memory database.");
+  if (/^(?:libsql|https|wss):\/\//.test(configuredDatabaseUrl)) {
+    fail("file backup operations apply only to a local SQLite database; use Turso backups for a remote database.");
+  }
+  if (configuredDatabaseUrl === ":memory:" || configuredDatabaseUrl === "file::memory:") {
+    fail("database operations are unavailable for an in-memory database.");
+  }
   if (!Number.isFinite(retentionDays) || retentionDays < 1) fail("BACKUP_RETENTION_DAYS must be a positive number.");
   if (dirname(databasePath) === backupDirectory) fail("BACKUP_DIR must be outside the live database directory.");
 }

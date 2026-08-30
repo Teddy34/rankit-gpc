@@ -16,20 +16,20 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
   }
 
   const domain = email.split("@")[1];
-  const [{ userCount }] = db.select({ userCount: count() }).from(users).all();
-  const domainAllowed = isDomainAllowed(domain);
+  const [{ userCount }] = await db.select({ userCount: count() }).from(users).all();
+  const domainAllowed = await isDomainAllowed(domain);
 
   // The first account bootstraps administration; all later registrations are restricted.
   if (userCount > 0 && !domainAllowed) return { status: "sent" };
 
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  const recentLink = db.select({ id: magicLinks.id }).from(magicLinks)
+  const recentLink = await db.select({ id: magicLinks.id }).from(magicLinks)
     .where(and(eq(magicLinks.email, email), gt(magicLinks.createdAt, tenMinutesAgo))).get();
   if (recentLink) return { status: "sent" };
 
   const token = createToken();
   const tokenHash = hashToken(token);
-  db.insert(magicLinks).values({
+  await db.insert(magicLinks).values({
     email,
     tokenHash,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -39,7 +39,7 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
   try {
     await sendMagicLinkEmail({ to: email, url: `${appUrl}/auth/callback?token=${encodeURIComponent(token)}` });
   } catch (error) {
-    db.delete(magicLinks).where(eq(magicLinks.tokenHash, tokenHash)).run();
+    await db.delete(magicLinks).where(eq(magicLinks.tokenHash, tokenHash)).run();
     console.error(`[email] Failed to send a sign-in link to ${email}`, error);
     return { status: "error", message: "We couldn’t send your sign-in link. Please wait a moment and try again." };
   }

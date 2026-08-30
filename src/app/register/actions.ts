@@ -15,19 +15,19 @@ export async function register(_state: RegistrationState, formData: FormData): P
   const displayName = String(formData.get("displayName") ?? "").trim();
   const avatar = String(formData.get("avatar") ?? "");
   const initialRating = Number(formData.get("initialRating"));
-  const link = db.select().from(magicLinks)
+  const link = await db.select().from(magicLinks)
     .where(and(eq(magicLinks.tokenHash, hashToken(token)), gt(magicLinks.expiresAt, new Date()))).get();
 
   if (!link) return { message: "This registration link is invalid or has expired." };
   if (displayName.length < 2 || displayName.length > 40) return { message: "Display name must be between 2 and 40 characters." };
   if (!avatars.has(avatar)) return { message: "Choose one of the available avatars." };
   if (!Number.isInteger(initialRating) || initialRating < 1000 || initialRating > 2000) return { message: "ELO must be a whole number from 1000 to 2000." };
-  if (db.select({ id: users.id }).from(users).where(eq(users.email, link.email)).get()) redirect("/login");
+  if (await db.select({ id: users.id }).from(users).where(eq(users.email, link.email)).get()) redirect("/login");
 
   try {
-    const user = db.transaction((tx) => {
-      const [{ userCount }] = tx.select({ userCount: count() }).from(users).all();
-      const created = tx.insert(users).values({
+    const user = await db.transaction(async (tx) => {
+      const [{ userCount }] = await tx.select({ userCount: count() }).from(users).all();
+      const created = await tx.insert(users).values({
         email: link.email,
         displayName,
         avatar,
@@ -38,7 +38,7 @@ export async function register(_state: RegistrationState, formData: FormData): P
 
       if (userCount === 0) {
         const domain = link.email.split("@")[1];
-        tx.insert(allowedDomains).values({ domain, createdBy: created.id }).onConflictDoNothing().run();
+        await tx.insert(allowedDomains).values({ domain, createdBy: created.id }).onConflictDoNothing().run();
       }
       return created;
     });

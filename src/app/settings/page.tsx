@@ -19,15 +19,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const user = await requireUser();
   const lockedDomains = [...configuredAllowedDomains()].sort();
   const removableDomains = user.isAdmin
-    ? db.select({ id: allowedDomains.id, domain: allowedDomains.domain }).from(allowedDomains).orderBy(asc(allowedDomains.domain)).all()
+    ? (await db.select({ id: allowedDomains.id, domain: allowedDomains.domain }).from(allowedDomains).orderBy(asc(allowedDomains.domain)).all())
       .filter((domain) => !lockedDomains.includes(domain.domain))
     : [];
   const { emailChanged, emailError, auditPage } = await searchParams;
   const requestedPage = Number(auditPage ?? "1");
-  const [{ auditCount }] = user.isAdmin ? db.select({ auditCount: count() }).from(auditLog).all() : [{ auditCount: 0 }];
+  const [{ auditCount }] = user.isAdmin ? await db.select({ auditCount: count() }).from(auditLog).all() : [{ auditCount: 0 }];
   const totalAuditPages = Math.max(1, Math.ceil(auditCount / AUDIT_PAGE_SIZE));
   const currentAuditPage = Number.isInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, totalAuditPages) : 1;
-  const auditEntries = user.isAdmin ? db.select({
+  const auditEntries = user.isAdmin ? await db.select({
     id: auditLog.id,
     actorName: users.displayName,
     action: auditLog.action,

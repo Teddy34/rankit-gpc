@@ -17,7 +17,7 @@ export async function updatePlayerAdministration(_state: PlayerAdminState, formD
   const action = String(formData.get("action") ?? "");
   if (!Number.isInteger(targetId) || !allowedActions.has(action)) return { status: "error", message: "Invalid player action." };
   if (targetId === actor.id) return { status: "error", message: "You cannot change your own account here." };
-  const target = db.select().from(users).where(eq(users.id, targetId)).get();
+  const target = await db.select().from(users).where(eq(users.id, targetId)).get();
   if (!target) return { status: "error", message: "Player not found." };
 
   const changes = action === "retire" ? { retiredAt: new Date() }
@@ -29,9 +29,9 @@ export async function updatePlayerAdministration(_state: PlayerAdminState, formD
     : action === "make_admin" ? "administrator.granted"
     : "administrator.revoked";
 
-  db.transaction((tx) => {
-    tx.update(users).set(changes).where(eq(users.id, targetId)).run();
-    tx.insert(auditLog).values({
+  await db.transaction(async (tx) => {
+    await tx.update(users).set(changes).where(eq(users.id, targetId)).run();
+    await tx.insert(auditLog).values({
       actorId: actor.id,
       action: actionName,
       entityType: "user",

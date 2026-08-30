@@ -10,12 +10,12 @@ import { PlayerAdminControls } from "./player-admin-controls";
 
 export default async function RankingPage() {
   const currentUser = await requireUser();
-  ensureMonthlyAwards();
-  const playerAwards = awardsByPlayer();
-  const allPlayers = db.select().from(users).orderBy(asc(users.displayName)).all();
+  await ensureMonthlyAwards();
+  const playerAwards = await awardsByPlayer();
+  const allPlayers = await db.select().from(users).orderBy(asc(users.displayName)).all();
   const rankedPlayers = allPlayers.filter((player) => !player.retiredAt)
     .sort((a, b) => b.currentRating - a.currentRating || a.displayName.localeCompare(b.displayName));
-  const activeGames = db.select({
+  const activeGames = await db.select({
     playedOn: games.playedOn,
     playerOneId: games.playerOneId,
     playerTwoId: games.playerTwoId,

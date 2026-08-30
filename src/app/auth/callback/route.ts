@@ -7,11 +7,11 @@ import { createSession, hashToken } from "@/lib/auth";
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
   if (!token) return NextResponse.redirect(new URL("/login?error=invalid", request.url));
-  const link = db.select().from(magicLinks)
+  const link = await db.select().from(magicLinks)
     .where(and(eq(magicLinks.tokenHash, hashToken(token)), gt(magicLinks.expiresAt, new Date()))).get();
   if (!link) return NextResponse.redirect(new URL("/login?error=expired", request.url));
 
-  const user = db.select().from(users).where(eq(users.email, link.email)).get();
+  const user = await db.select().from(users).where(eq(users.email, link.email)).get();
   if (!user) {
     const response = NextResponse.redirect(new URL(`/register?token=${encodeURIComponent(token)}`, request.url));
     return response;
