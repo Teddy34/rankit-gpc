@@ -1,8 +1,9 @@
 "use server";
 
-import { and, count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
+import { databaseErrorIncludes } from "@/db/errors";
 import { allowedDomains, magicLinks, users } from "@/db/schema";
 import { profileAvatars } from "@/domain/profile";
 import { createSession, hashToken } from "@/lib/auth";
@@ -23,6 +24,10 @@ export async function register(_state: RegistrationState, formData: FormData): P
   if (!avatars.has(avatar)) return { message: "Choose one of the available avatars." };
   if (!Number.isInteger(initialRating) || initialRating < 1000 || initialRating > 2000) return { message: "ELO must be a whole number from 1000 to 2000." };
   if (await db.select({ id: users.id }).from(users).where(eq(users.email, link.email)).get()) redirect("/login");
+  if (await db.select({ id: users.id }).from(users)
+    .where(sql`lower(trim(${users.displayName})) = ${displayName.toLocaleLowerCase("en-US")}`).get()) {
+    return { message: "That display name is already taken." };
+  }
 
   try {
     const user = await db.transaction(async (tx) => {
@@ -44,7 +49,7 @@ export async function register(_state: RegistrationState, formData: FormData): P
     });
     await createSession(user.id);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+    if (databaseErrorIncludes(error, "users_display_name_ci_unique")) {
       return { message: "That display name is already taken." };
     }
     throw error;

@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
+import { databaseErrorIncludes } from "@/db/errors";
 import { allowedDomains, auditLog, emailChanges, users } from "@/db/schema";
 import { isValidDomain, normalizeDomain } from "@/domain/email-domain";
 import { profileAvatars } from "@/domain/profile";
@@ -22,7 +23,7 @@ export async function updateProfile(_state: SettingsState, formData: FormData): 
   try {
     await db.update(users).set({ displayName, avatar }).where(eq(users.id, user.id)).run();
   } catch (error) {
-    if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) return { status: "error", message: "That display name is already taken." };
+    if (databaseErrorIncludes(error, "users_display_name_ci_unique")) return { status: "error", message: "That display name is already taken." };
     throw error;
   }
   revalidatePath("/", "layout");
