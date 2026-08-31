@@ -7,6 +7,7 @@ import { calculateWinningStreaks } from "@/domain/winning-streak";
 import { requireUser } from "@/lib/auth";
 import { awardsByPlayer, ensureMonthlyAwards } from "@/lib/monthly-awards";
 import { PlayerAdminControls } from "./player-admin-controls";
+import { AdminConsole } from "./admin-console";
 
 export default async function RankingPage() {
   const currentUser = await requireUser();
@@ -69,6 +70,7 @@ export default async function RankingPage() {
           </article>)}
         </div>
       </section>}
+      {currentUser.isAdmin ? <AdminConsole /> : null}
     </main>
   );
 }

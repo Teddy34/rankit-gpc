@@ -14,6 +14,8 @@ const actionLabels: Record<string, string> = {
   "game.deleted": "Deleted a game",
   "player.retired": "Retired a player",
   "player.unretired": "Unretired a player",
+  "player.deleted": "Deleted a player",
+  "player.elo_reset": "Reset a player's Elo",
   "administrator.granted": "Granted administrator rights",
   "administrator.revoked": "Revoked administrator rights",
   "domain.allowed": "Allowed an email domain",
