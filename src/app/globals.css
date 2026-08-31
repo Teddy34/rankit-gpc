@@ -40,15 +40,36 @@ h1 { margin: 0; font-size: clamp(36px, 7vw, 68px); line-height: .95; letter-spac
 .award-badges { display: flex; flex-wrap: wrap; gap: 3px; font-size: 14px; line-height: 1; }
 .rating { font-size: 20px; text-align: right; }
 .trend { text-align: right; font-size: 14px; }
+.history-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start; }
+.history-filter { max-height: 620px; }
+.filter-actions { padding: 10px 16px; display: flex; gap: 8px; border-bottom: 1px solid var(--border); }
+.filter-actions button { padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-raised); color: var(--text); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.player-filters { max-height: 515px; overflow-y: auto; }
+.player-filters label { min-height: 54px; padding: 9px 16px; display: grid; grid-template-columns: 18px 9px 1fr; align-items: center; gap: 9px; cursor: pointer; }
+.player-filters label + label { border-top: 1px solid var(--border); }
+.player-filters input { accent-color: var(--accent); }
+.player-filters i { width: 9px; height: 9px; border-radius: 50%; }
+.player-filters span { min-width: 0; font-size: 13px; font-style: normal; font-weight: 800; overflow-wrap: anywhere; }
+.player-filters small { margin-top: 3px; display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+.chart-scroll { padding: 12px; overflow-x: auto; }
+.chart-scroll svg { width: 100%; min-width: 660px; display: block; }
+.chart-grid { stroke: var(--border); stroke-width: 1; }
+.chart-axis, .chart-tick { stroke: #5b625b; stroke-width: 1; }
+.chart-axis-label { fill: var(--muted); font-size: 12px; }
+.rating-line { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.rating-point { fill: var(--surface); stroke: currentColor; stroke-width: 2; vector-effect: non-scaling-stroke; }
 
 @media (max-width: 640px) {
-  .site-header { padding: 0 18px; }
-  nav { gap: 18px; }
+  .site-header { height: auto; min-height: 72px; padding: 14px 18px; flex-wrap: wrap; gap: 14px; }
+  nav { width: 100%; justify-content: space-between; gap: 12px; overflow-x: auto; font-size: 12px; }
   main { width: calc(100% - 28px); margin: 40px auto; }
   .hero { align-items: stretch; flex-direction: column; }
   .button { text-align: center; }
   .ranking-list li { padding: 12px 14px; grid-template-columns: 24px 46px 1fr 58px; gap: 8px; }
   .trend { display: none; }
+  .history-layout { grid-template-columns: 1fr; }
+  .history-filter { max-height: none; }
+  .player-filters { max-height: 240px; }
 }
 
 .auth-shell { min-height: calc(100vh - 136px); display: grid; place-items: center; margin-block: 32px; }
