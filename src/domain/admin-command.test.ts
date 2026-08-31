@@ -6,6 +6,10 @@ describe("parseAdminCommand", () => {
     expect(parseAdminCommand(input)).toEqual({ ok: true, command: { type: "help" } });
   });
 
+  it.each(["players", "players list", "list players"])("accepts the %s player-list alias", (input) => {
+    expect(parseAdminCommand(input)).toEqual({ ok: true, command: { type: "list_players" } });
+  });
+
   it("accepts a quoted player name", () => {
     expect(parseAdminCommand('retire "Ada Lovelace"')).toEqual({
       ok: true,

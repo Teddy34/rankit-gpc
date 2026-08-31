@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, isNull, or } from "drizzle-orm";
+import { asc, eq, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { allowedDomains, auditLog, games, magicLinks, monthlyAwards, users } from "@/db/schema";
@@ -16,6 +16,7 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const helpMessage = [
   "Commands:",
+  "  players                         List player IDs, names, and emails",
   "  retire <player>                 Retire a player",
   "  unretire <player>               Restore a retired player",
   "  delete <player>                 Prepare permanent deletion",
@@ -72,6 +73,22 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
   if (!parsed.ok) return { status: "error", message: parsed.message };
   const command = parsed.command;
   if (command.type === "help") return { status: "success", message: helpMessage };
+
+  if (command.type === "list_players") {
+    const players = await db.select({ id: users.id, displayName: users.displayName, email: users.email })
+      .from(users)
+      .orderBy(asc(users.displayName));
+    if (players.length === 0) return { status: "success", message: "No players found." };
+
+    const idWidth = Math.max(2, ...players.map((player) => String(player.id).length));
+    const nameWidth = Math.max("DISPLAY NAME".length, ...players.map((player) => player.displayName.length));
+    const lines = [
+      `${"ID".padEnd(idWidth)}  ${"DISPLAY NAME".padEnd(nameWidth)}  EMAIL`,
+      `${"-".repeat(idWidth)}  ${"-".repeat(nameWidth)}  ${"-".repeat(5)}`,
+      ...players.map((player) => `${String(player.id).padEnd(idWidth)}  ${player.displayName.padEnd(nameWidth)}  ${player.email}`),
+    ];
+    return { status: "success", message: lines.join("\n") };
+  }
 
   if (command.type === "add_domain") {
     if (!isValidDomain(command.domain)) return { status: "error", message: "Enter a valid domain, such as example.com." };
