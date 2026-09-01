@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useRef } from "react";
+import type { ClipboardEvent } from "react";
 import { profileAvatars } from "@/domain/profile";
 import { PlayerIcon } from "../player-icon";
 import { removeAvatarImage, requestEmailChange, updateProfile, uploadAvatar, type SettingsState } from "./actions";
@@ -17,26 +18,25 @@ function PhotoUploadForm({ user }: { user: UserSettings }) {
   const [photoState, photoAction, photoPending] = useActionState(uploadAvatar, initialState);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    function handlePaste(event: ClipboardEvent) {
-      const item = Array.from(event.clipboardData?.items ?? []).find((entry) => entry.type.startsWith("image/"));
-      const file = item?.getAsFile();
-      const input = fileInputRef.current;
-      if (!file || !input) return;
-      const transfer = new DataTransfer();
-      transfer.items.add(file);
-      input.files = transfer.files;
-      event.preventDefault();
-    }
-    document.addEventListener("paste", handlePaste);
-    return () => document.removeEventListener("paste", handlePaste);
-  }, []);
+  // A document-wide listener only fires if something happens to already be focused; a
+  // paste needs somewhere to land. This zone is that somewhere: click it (or tab to it)
+  // and paste goes straight into the file input via a synthesized DataTransfer.
+  function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
+    const item = Array.from(event.clipboardData.items).find((entry) => entry.type.startsWith("image/"));
+    const file = item?.getAsFile();
+    const input = fileInputRef.current;
+    if (!file || !input) return;
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    event.preventDefault();
+  }
 
   return <form action={photoAction} className="settings-form">
     <PlayerIcon player={user} className="avatar" />
     <label htmlFor="avatarImage">Custom photo (PNG, JPEG, or GIF, up to 2MB)</label>
     <input ref={fileInputRef} id="avatarImage" name="avatarImage" type="file" accept="image/png,image/jpeg,image/gif" required />
-    <small>You can also paste an image (Ctrl+V / Cmd+V) anywhere on this page.</small>
+    <div className="paste-zone" tabIndex={0} onPaste={handlePaste}>Or click here and paste an image (Ctrl+V / Cmd+V)</div>
     <Feedback state={photoState} />
     <button className="button secondary" disabled={photoPending}>{photoPending ? "Uploading…" : "Upload photo"}</button>
   </form>;
