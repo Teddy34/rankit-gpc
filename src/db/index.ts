@@ -5,3 +5,5 @@ import { databaseConfig } from "./config";
 
 export const client = createClient(databaseConfig());
 export const db = drizzle(client, { schema });
+
+export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];

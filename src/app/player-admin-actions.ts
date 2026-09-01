@@ -18,7 +18,7 @@ export async function updatePlayerAdministration(_state: PlayerAdminState, formD
   if (!Number.isInteger(targetId) || !allowedActions.has(action)) return { status: "error", message: "Invalid player action." };
   if (targetId === actor.id) return { status: "error", message: "You cannot change your own account here." };
   const target = await db.select().from(users).where(eq(users.id, targetId)).get();
-  if (!target) return { status: "error", message: "Player not found." };
+  if (!target || target.deletedAt) return { status: "error", message: "Player not found." };
 
   const changes = action === "retire" ? { retiredAt: new Date() }
     : action === "unretire" ? { retiredAt: null }

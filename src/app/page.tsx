@@ -13,7 +13,7 @@ export default async function RankingPage() {
   const currentUser = await requireUser();
   await ensureMonthlyAwards();
   const playerAwards = await awardsByPlayer();
-  const allPlayers = await db.select().from(users).orderBy(asc(users.displayName)).all();
+  const allPlayers = await db.select().from(users).where(isNull(users.deletedAt)).orderBy(asc(users.displayName)).all();
   const rankedPlayers = allPlayers.filter((player) => !player.retiredAt)
     .sort((a, b) => b.currentRating - a.currentRating || a.displayName.localeCompare(b.displayName));
   const activeGames = await db.select({

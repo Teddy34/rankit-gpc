@@ -29,6 +29,20 @@
       "when": 1785151220454,
       "tag": "0003_dizzy_prodigy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788249955375,
+      "tag": "0004_fancy_kate_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788250471134,
+      "tag": "0005_broken_toxin",
+      "breakpoints": true
     }
   ]
 }

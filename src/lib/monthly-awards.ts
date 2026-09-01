@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, asc, desc, eq, isNull, lt } from "drizzle-orm";
 import { db } from "@/db";
-import { games, monthlyAwards, users } from "@/db/schema";
+import { games, monthlyAwards, ratingResets, users } from "@/db/schema";
 import { awardLevelForStreak, brusselsMonth, monthsAfter, previousMonth } from "@/domain/monthly-award";
 import { replayRatings } from "@/domain/rating-replay";
 
@@ -14,10 +14,15 @@ async function awardLeaderForMonth(awardMonth: string) {
   if (eligiblePlayers.length === 0) return null;
 
   const eligibleIds = new Set(eligiblePlayers.map((player) => player.id));
+  const cutoff = `${awardMonth}-01`;
   const historicalGames = (await db.select().from(games)
-    .where(and(lt(games.playedOn, `${awardMonth}-01`), isNull(games.deletedAt)))
+    .where(and(lt(games.playedOn, cutoff), isNull(games.deletedAt)))
     .all())
     .filter((game) => eligibleIds.has(game.playerOneId) && eligibleIds.has(game.playerTwoId));
+  const historicalResets = (await db.select().from(ratingResets)
+    .where(and(lt(ratingResets.effectiveOn, cutoff), isNull(ratingResets.deletedAt)))
+    .all())
+    .filter((reset) => eligibleIds.has(reset.userId));
   const names = new Map(eligiblePlayers.map((player) => [player.id, player.displayName]));
   const replay = replayRatings(
     eligiblePlayers.map((player) => ({ id: player.id, initialRating: player.initialRating })),
@@ -29,6 +34,13 @@ async function awardLeaderForMonth(awardMonth: string) {
       playedOn: game.playedOn,
       sequence: game.sequence,
       playerOneName: names.get(game.playerOneId) ?? "",
+    })),
+    historicalResets.map((reset) => ({
+      id: reset.id,
+      userId: reset.userId,
+      rating: reset.rating,
+      effectiveOn: reset.effectiveOn,
+      sequence: reset.sequence,
     })),
   );
   return [...eligiblePlayers].sort((a, b) =>

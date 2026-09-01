@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
@@ -15,6 +15,8 @@ export const users = sqliteTable("users", {
   currentRating: integer("current_rating").notNull(),
   isAdmin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+  deletedBy: integer("deleted_by").references((): AnySQLiteColumn => users.id, { onDelete: "restrict" }),
   ...timestamps,
 }, (table) => [
   uniqueIndex("users_email_ci_unique").on(sql`lower(trim(${table.email}))`),
@@ -72,6 +74,23 @@ export const games = sqliteTable("games", {
   check("games_zero_sum", sql`${table.playerOneDelta} + ${table.playerTwoDelta} = 0`),
   uniqueIndex("games_sequence_unique").on(table.sequence),
   index("games_recompute_order_idx").on(table.playedOn, table.sequence),
+]);
+
+export const ratingResets = sqliteTable("rating_resets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  rating: integer("rating").notNull(),
+  effectiveOn: text("effective_on").notNull(),
+  sequence: integer("sequence").notNull(),
+  setBy: integer("set_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+  deletedBy: integer("deleted_by").references(() => users.id, { onDelete: "restrict" }),
+  ...timestamps,
+}, (table) => [
+  check("rating_resets_range", sql`${table.rating} between 1000 and 2000`),
+  uniqueIndex("rating_resets_sequence_unique").on(table.sequence),
+  index("rating_resets_user_id_idx").on(table.userId),
+  index("rating_resets_recompute_order_idx").on(table.effectiveOn, table.sequence),
 ]);
 
 export const monthlyAwards = sqliteTable("monthly_awards", {

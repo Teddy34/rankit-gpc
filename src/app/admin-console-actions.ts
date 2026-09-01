@@ -1,33 +1,32 @@
 "use server";
 
-import { asc, eq, isNull, or } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { allowedDomains, auditLog, games, magicLinks, monthlyAwards, users } from "@/db/schema";
+import { allowedDomains, auditLog, magicLinks, ratingResets, sessions, users } from "@/db/schema";
 import { parseAdminCommand } from "@/domain/admin-command";
 import { isValidDomain } from "@/domain/email-domain";
-import { replayRatings } from "@/domain/rating-replay";
+import { todayInBrussels } from "@/lib/dates";
 import { configuredAllowedDomains } from "@/lib/allowed-domains";
+import { nextGlobalSequence, recalculateAllRatings } from "@/lib/rating-recalculation";
 import { requireUser } from "@/lib/auth";
 
 export type AdminConsoleResult = { status: "success" | "error" | "confirm"; message: string };
-
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const helpMessage = [
   "Commands:",
   "  players                         List player IDs, names, and emails",
   "  retire <player>                 Retire a player",
   "  unretire <player>               Restore a retired player",
-  "  delete <player>                 Prepare permanent deletion",
-  "  elo reset <player> [to <elo>]   Rebase Elo; default 1500",
+  "  delete <player>                 Deactivate an account for good",
+  "  elo reset <player> [to <elo>]   Set current Elo; default 1500",
   "  domain add <domain>              Allow an email domain",
   "  help | helper | ?                Show this help",
   "Player may be an ID, email, or exact display name. Quote names with spaces.",
 ].join("\n");
 
 async function findPlayer(selector: string) {
-  const players = await db.select().from(users).all();
+  const players = await db.select().from(users).where(isNull(users.deletedAt)).all();
   const normalized = selector.trim().toLocaleLowerCase("en-US");
   const numericId = /^\d+$/.test(normalized) ? Number(normalized) : null;
   return players.find((player) =>
@@ -35,33 +34,6 @@ async function findPlayer(selector: string) {
     player.email.toLocaleLowerCase("en-US") === normalized ||
     player.displayName.toLocaleLowerCase("en-US") === normalized,
   );
-}
-
-async function recalculateRatings(tx: Transaction): Promise<void> {
-  const allPlayers = await tx.select().from(users).all();
-  const activeGames = await tx.select().from(games).where(isNull(games.deletedAt)).all();
-  const names = new Map(allPlayers.map((player) => [player.id, player.displayName]));
-  const replay = replayRatings(
-    allPlayers.map((player) => ({ id: player.id, initialRating: player.initialRating })),
-    activeGames.map((game) => ({
-      id: game.id,
-      playerOneId: game.playerOneId,
-      playerTwoId: game.playerTwoId,
-      result: game.result,
-      playedOn: game.playedOn,
-      sequence: game.sequence,
-      playerOneName: names.get(game.playerOneId) ?? "",
-    })),
-  );
-  for (const game of replay.games) {
-    await tx.update(games).set({
-      playerOneDelta: game.playerOneDelta,
-      playerTwoDelta: game.playerTwoDelta,
-    }).where(eq(games.id, game.id)).run();
-  }
-  for (const [userId, rating] of replay.ratings) {
-    await tx.update(users).set({ currentRating: rating }).where(eq(users.id, userId)).run();
-  }
 }
 
 export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleResult> {
@@ -77,6 +49,7 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
   if (command.type === "list_players") {
     const players = await db.select({ id: users.id, displayName: users.displayName, email: users.email })
       .from(users)
+      .where(isNull(users.deletedAt))
       .orderBy(asc(users.displayName));
     if (players.length === 0) return { status: "success", message: "No players found." };
 
@@ -135,12 +108,17 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
   }
 
   if (command.type === "reset_elo") {
-    let currentRating = command.rating;
+    const effectiveOn = todayInBrussels();
     await db.transaction(async (tx) => {
-      await tx.update(users).set({ initialRating: command.rating }).where(eq(users.id, target.id)).run();
-      await recalculateRatings(tx);
-      const updated = await tx.select({ currentRating: users.currentRating }).from(users).where(eq(users.id, target.id)).get();
-      currentRating = updated?.currentRating ?? command.rating;
+      const sequence = await nextGlobalSequence(tx);
+      await tx.insert(ratingResets).values({
+        userId: target.id,
+        rating: command.rating,
+        effectiveOn,
+        sequence,
+        setBy: actor.id,
+      }).run();
+      await recalculateAllRatings(tx);
       await tx.insert(auditLog).values({
         actorId: actor.id,
         action: "player.elo_reset",
@@ -148,48 +126,48 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
         entityId: String(target.id),
         details: {
           displayName: target.displayName,
-          previousInitialRating: target.initialRating,
           previousCurrentRating: target.currentRating,
-          initialRating: command.rating,
-          currentRating,
+          rating: command.rating,
+          effectiveOn,
           source: "admin_console",
         },
       }).run();
     });
     revalidatePath("/");
     revalidatePath("/games");
-    return { status: "success", message: `Rebased ${target.displayName} at ${command.rating}; current Elo is ${currentRating} after game history.` };
+    revalidatePath("/history");
+    return { status: "success", message: `Set ${target.displayName}'s Elo to ${command.rating}.` };
   }
 
   if (!command.confirmed) {
     return {
       status: "confirm",
-      message: `This permanently deletes ${target.displayName}, their awards, sessions, and every game involving them. Run: delete ${target.id} --confirm`,
+      message: `This deactivates ${target.displayName}'s account and frees up their email for reuse. Their games, rating resets, and awards stay on record — other players' Elo is unaffected. Run: delete ${target.id} --confirm`,
     };
   }
 
-  let deletedGames = 0;
+  const anonymizedEmail = `deleted-${target.id}@removed.invalid`;
   await db.transaction(async (tx) => {
-    await tx.delete(auditLog).where(eq(auditLog.actorId, target.id)).run();
-    await tx.update(allowedDomains).set({ createdBy: null }).where(eq(allowedDomains.createdBy, target.id)).run();
-    await tx.update(games).set({ registeredBy: actor.id }).where(eq(games.registeredBy, target.id)).run();
-    await tx.update(games).set({ deletedBy: actor.id }).where(eq(games.deletedBy, target.id)).run();
-    const gameDeletion = await tx.delete(games).where(or(eq(games.playerOneId, target.id), eq(games.playerTwoId, target.id))).run();
-    deletedGames = gameDeletion.rowsAffected;
-    await tx.delete(monthlyAwards).where(eq(monthlyAwards.userId, target.id)).run();
+    await tx.update(users).set({
+      deletedAt: new Date(),
+      deletedBy: actor.id,
+      email: anonymizedEmail,
+      isAdmin: false,
+    }).where(eq(users.id, target.id)).run();
+    // Sessions and pending magic links are revoked outright; nothing else references them.
+    await tx.delete(sessions).where(eq(sessions.userId, target.id)).run();
     await tx.delete(magicLinks).where(eq(magicLinks.email, target.email)).run();
-    await tx.delete(users).where(eq(users.id, target.id)).run();
-    await recalculateRatings(tx);
     await tx.insert(auditLog).values({
       actorId: actor.id,
       action: "player.deleted",
       entityType: "user",
       entityId: String(target.id),
-      details: { displayName: target.displayName, email: target.email, deletedGames, source: "admin_console" },
+      details: { displayName: target.displayName, previousEmail: target.email, source: "admin_console" },
     }).run();
   });
   revalidatePath("/");
   revalidatePath("/games");
   revalidatePath("/settings");
-  return { status: "success", message: `Deleted ${target.displayName} and ${deletedGames} game${deletedGames === 1 ? "" : "s"}.` };
+  revalidatePath("/history");
+  return { status: "success", message: `Deactivated ${target.displayName}. Their game history and other players' Elo are unaffected.` };
 }

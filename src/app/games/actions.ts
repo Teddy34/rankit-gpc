@@ -3,8 +3,8 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { auditLog, games, users } from "@/db/schema";
-import { replayRatings } from "@/domain/rating-replay";
+import { auditLog, games } from "@/db/schema";
+import { recalculateAllRatings } from "@/lib/rating-recalculation";
 import { requireUser } from "@/lib/auth";
 
 export type DeleteGameState = { message?: string };
@@ -38,27 +38,7 @@ export async function deleteGame(_state: DeleteGameState, formData: FormData): P
       },
     }).run();
 
-    const allPlayers = await tx.select().from(users).all();
-    const remainingGames = await tx.select().from(games).where(isNull(games.deletedAt)).all();
-    const names = new Map(allPlayers.map((player) => [player.id, player.displayName]));
-    const replay = replayRatings(
-      allPlayers.map((player) => ({ id: player.id, initialRating: player.initialRating })),
-      remainingGames.map((game) => ({
-        id: game.id,
-        playerOneId: game.playerOneId,
-        playerTwoId: game.playerTwoId,
-        result: game.result,
-        playedOn: game.playedOn,
-        sequence: game.sequence,
-        playerOneName: names.get(game.playerOneId) ?? "",
-      })),
-    );
-    for (const game of replay.games) {
-      await tx.update(games).set({ playerOneDelta: game.playerOneDelta, playerTwoDelta: game.playerTwoDelta }).where(eq(games.id, game.id)).run();
-    }
-    for (const [userId, rating] of replay.ratings) {
-      await tx.update(users).set({ currentRating: rating }).where(eq(users.id, userId)).run();
-    }
+    await recalculateAllRatings(tx);
   });
 
   redirect("/games?deleted=1");
