@@ -21,7 +21,13 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
   const domainAllowed = await isDomainAllowed(domain);
 
   // The first account bootstraps administration; all later registrations are restricted.
-  if (userCount > 0 && !domainAllowed) return { status: "sent" };
+  // The response stays identical to a real send either way, so this domain doesn't leak
+  // to whoever's asking — but that also means a legitimate blocked sign-in leaves no trace
+  // anywhere else, so it's worth a log line here.
+  if (userCount > 0 && !domainAllowed) {
+    console.info(`[login] Rejected sign-in for ${email}: domain "${domain}" is not allowed.`);
+    return { status: "sent" };
+  }
 
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
   const recentLink = await db.select({ id: magicLinks.id }).from(magicLinks)
