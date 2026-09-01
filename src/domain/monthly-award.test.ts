@@ -22,9 +22,9 @@ describe("monthly awards", () => {
     expect(formatAwardMonth("2026-07")).toBe("July 2026");
   });
 
-  it("describes each level differently", () => {
-    expect(describeAward({ level: "bronze", month: "2026-07", streak: 1 })).toBe("Bronze — top-rated player in July 2026");
-    expect(describeAward({ level: "silver", month: "2026-08", streak: 2 })).toBe("Silver — top-rated player for 2 straight months, through August 2026");
-    expect(describeAward({ level: "gold", month: "2026-10", streak: 4 })).toBe("Gold — top-rated player for 4 straight months, through October 2026");
+  it("describes each level differently, naming the completed month rather than the award key's month", () => {
+    expect(describeAward({ level: "bronze", month: "2026-07", streak: 1 })).toBe("Bronze — top-rated player in June 2026");
+    expect(describeAward({ level: "silver", month: "2026-08", streak: 2 })).toBe("Silver — top-rated player for 2 straight months, through July 2026");
+    expect(describeAward({ level: "gold", month: "2026-10", streak: 4 })).toBe("Gold — top-rated player for 4 straight months, through September 2026");
   });
 });

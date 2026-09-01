@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { allowedDomains, auditLog, magicLinks, monthlyAwards, ratingResets, sessions, users } from "@/db/schema";
@@ -150,12 +150,12 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
     const { month } = command;
     if (month > brusselsMonth()) return { status: "error", message: "Cannot set an award for a future month." };
     const streak = STREAK_FOR_LEVEL[command.level];
-    const previous = await db.select().from(monthlyAwards).where(eq(monthlyAwards.awardMonth, month)).get();
+    const previous = await db.select().from(monthlyAwards).where(and(eq(monthlyAwards.awardMonth, month), isNull(monthlyAwards.deletedAt))).get();
     await db.transaction(async (tx) => {
       await tx.insert(monthlyAwards).values({ awardMonth: month, userId: target.id, level: command.level, streak })
         .onConflictDoUpdate({
           target: monthlyAwards.awardMonth,
-          set: { userId: target.id, level: command.level, streak, awardedAt: new Date() },
+          set: { userId: target.id, level: command.level, streak, awardedAt: new Date(), deletedAt: null, deletedBy: null },
         }).run();
       await tx.insert(auditLog).values({
         actorId: actor.id,
@@ -178,11 +178,11 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
 
   if (command.type === "remove_award") {
     const { month } = command;
-    const existing = await db.select().from(monthlyAwards).where(eq(monthlyAwards.awardMonth, month)).get();
+    const existing = await db.select().from(monthlyAwards).where(and(eq(monthlyAwards.awardMonth, month), isNull(monthlyAwards.deletedAt))).get();
     if (!existing) return { status: "error", message: `No award recorded for ${month}.` };
     if (existing.userId !== target.id) return { status: "error", message: `${target.displayName} does not hold the ${month} award.` };
     await db.transaction(async (tx) => {
-      await tx.delete(monthlyAwards).where(eq(monthlyAwards.awardMonth, month)).run();
+      await tx.update(monthlyAwards).set({ deletedAt: new Date(), deletedBy: actor.id }).where(eq(monthlyAwards.awardMonth, month)).run();
       await tx.insert(auditLog).values({
         actorId: actor.id,
         action: "award.removed",

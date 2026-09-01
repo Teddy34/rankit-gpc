@@ -100,6 +100,8 @@ export const monthlyAwards = sqliteTable("monthly_awards", {
   level: text("level", { enum: ["bronze", "silver", "gold"] }).notNull(),
   streak: integer("streak").notNull(),
   awardedAt: integer("awarded_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+  deletedBy: integer("deleted_by").references((): AnySQLiteColumn => users.id, { onDelete: "restrict" }),
 }, (table) => [
   uniqueIndex("monthly_awards_month_unique").on(table.awardMonth),
   index("monthly_awards_user_id_idx").on(table.userId),

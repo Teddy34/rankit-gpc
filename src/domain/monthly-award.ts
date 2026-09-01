@@ -15,7 +15,7 @@ export function formatAwardMonth(month: string): string {
 
 /** A one-line explanation of why an award was won, distinct per level, for use as a tooltip. */
 export function describeAward(award: MonthlyAward): string {
-  const monthLabel = formatAwardMonth(award.month);
+  const monthLabel = formatAwardMonth(previousMonth(award.month));
   if (award.level === "bronze") return `Bronze — top-rated player in ${monthLabel}`;
   return `${award.level === "silver" ? "Silver" : "Gold"} — top-rated player for ${award.streak} straight months, through ${monthLabel}`;
 }
