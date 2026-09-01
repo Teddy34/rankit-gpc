@@ -10,6 +10,7 @@ export type AdminCommand =
   | { type: "reset_elo"; player: string; rating: number }
   | { type: "set_award"; player: string; level: AwardLevel; month: string }
   | { type: "remove_award"; player: string; month: string }
+  | { type: "avatar_reset"; player: string }
   | { type: "add_domain"; domain: string };
 
 export type ParsedAdminCommand =
@@ -80,6 +81,11 @@ export function parseAdminCommand(input: string): ParsedAdminCommand {
     const player = cleanArgument(match ? argument.slice(0, match.index) : argument);
     if (!player || !match) return { ok: false, message: "Usage: award remove <player> <yyyy-mm>" };
     return { ok: true, command: { type: "remove_award", player, month: match[1] } };
+  }
+
+  if (lower.startsWith("avatar reset ")) {
+    const player = cleanArgument(command.slice("avatar reset ".length));
+    return player ? { ok: true, command: { type: "avatar_reset", player } } : { ok: false, message: "Usage: avatar reset <player>" };
   }
 
   if (lower.startsWith("domain add ")) {

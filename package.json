@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
+    "@vercel/blob": "^2.8.0",
     "better-sqlite3": "13.0.1",
     "drizzle-orm": "0.45.2",
     "next": "16.2.11",

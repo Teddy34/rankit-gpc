@@ -5,10 +5,12 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { databaseErrorIncludes } from "@/db/errors";
 import { allowedDomains, auditLog, emailChanges, users } from "@/db/schema";
+import { avatarImageContentType, detectImageFormat, MAX_AVATAR_IMAGE_BYTES } from "@/domain/avatar-image";
 import { isValidDomain, normalizeDomain } from "@/domain/email-domain";
 import { profileAvatars } from "@/domain/profile";
 import { configuredAllowedDomains, isDomainAllowed } from "@/lib/allowed-domains";
 import { createToken, hashToken, normalizeEmail, requireUser } from "@/lib/auth";
+import { deleteAvatarImage, uploadAvatarImage } from "@/lib/avatar-storage";
 import { sendEmailChangeEmail } from "@/lib/email";
 
 export type SettingsState = { status?: "success" | "error"; message?: string };
@@ -28,6 +30,31 @@ export async function updateProfile(_state: SettingsState, formData: FormData): 
   }
   revalidatePath("/", "layout");
   return { status: "success", message: "Profile updated." };
+}
+
+export async function uploadAvatar(_state: SettingsState, formData: FormData): Promise<SettingsState> {
+  const user = await requireUser();
+  const file = formData.get("avatarImage");
+  if (!(file instanceof File) || file.size === 0) return { status: "error", message: "Choose an image to upload." };
+  if (file.size > MAX_AVATAR_IMAGE_BYTES) return { status: "error", message: "Image must be smaller than 2MB." };
+  const header = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const format = detectImageFormat(header);
+  if (!format) return { status: "error", message: "Choose a PNG, JPEG, or GIF image." };
+
+  const url = await uploadAvatarImage(user.id, file, avatarImageContentType(format));
+  await db.update(users).set({ avatarImageUrl: url }).where(eq(users.id, user.id)).run();
+  if (user.avatarImageUrl) await deleteAvatarImage(user.avatarImageUrl);
+  revalidatePath("/", "layout");
+  return { status: "success", message: "Photo updated." };
+}
+
+export async function removeAvatarImage(): Promise<SettingsState> {
+  const user = await requireUser();
+  if (!user.avatarImageUrl) return { status: "error", message: "You don’t have a custom photo set." };
+  await db.update(users).set({ avatarImageUrl: null }).where(eq(users.id, user.id)).run();
+  await deleteAvatarImage(user.avatarImageUrl);
+  revalidatePath("/", "layout");
+  return { status: "success", message: "Photo removed." };
 }
 
 export async function requestEmailChange(_state: SettingsState, formData: FormData): Promise<SettingsState> {

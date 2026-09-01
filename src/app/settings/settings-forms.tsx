@@ -2,9 +2,10 @@
 
 import { useActionState } from "react";
 import { profileAvatars } from "@/domain/profile";
-import { requestEmailChange, updateProfile, type SettingsState } from "./actions";
+import { PlayerIcon } from "../player-icon";
+import { removeAvatarImage, requestEmailChange, updateProfile, uploadAvatar, type SettingsState } from "./actions";
 
-type UserSettings = { displayName: string; avatar: string; email: string };
+type UserSettings = { displayName: string; avatar: string; avatarImageUrl: string | null; email: string };
 const initialState: SettingsState = {};
 
 function Feedback({ state }: { state: SettingsState }) {
@@ -14,15 +15,31 @@ function Feedback({ state }: { state: SettingsState }) {
 
 export function ProfileForm({ user }: { user: UserSettings }) {
   const [state, action, pending] = useActionState(updateProfile, initialState);
-  return <form action={action} className="settings-form">
-    <label htmlFor="displayName">Display name</label>
-    <input id="displayName" name="displayName" defaultValue={user.displayName} minLength={2} maxLength={40} required />
-    <fieldset><legend>Icon</legend><div className="avatar-picker">
-      {profileAvatars.map((avatar) => <label key={avatar}><input type="radio" name="avatar" value={avatar} defaultChecked={avatar === user.avatar} /><span>{avatar}</span></label>)}
-    </div></fieldset>
-    <Feedback state={state} />
-    <button className="button" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
-  </form>;
+  const [photoState, photoAction, photoPending] = useActionState(uploadAvatar, initialState);
+  const [removeState, removeAction, removePending] = useActionState(removeAvatarImage, initialState);
+  return <>
+    <form action={action} className="settings-form">
+      <label htmlFor="displayName">Display name</label>
+      <input id="displayName" name="displayName" defaultValue={user.displayName} minLength={2} maxLength={40} required />
+      <fieldset><legend>Icon</legend><div className="avatar-picker">
+        {profileAvatars.map((avatar) => <label key={avatar}><input type="radio" name="avatar" value={avatar} defaultChecked={avatar === user.avatar} /><span>{avatar}</span></label>)}
+      </div></fieldset>
+      <Feedback state={state} />
+      <button className="button" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
+    </form>
+    <form action={photoAction} className="settings-form">
+      <PlayerIcon player={user} className="avatar" />
+      <label htmlFor="avatarImage">Custom photo (PNG, JPEG, or GIF, up to 2MB)</label>
+      <input id="avatarImage" name="avatarImage" type="file" accept="image/png,image/jpeg,image/gif" required />
+      <Feedback state={photoState} />
+      <button className="button secondary" disabled={photoPending}>{photoPending ? "Uploading…" : "Upload photo"}</button>
+    </form>
+    {user.avatarImageUrl && <form action={removeAction} className="settings-form">
+      <small>Remove your photo to go back to your emoji icon.</small>
+      <Feedback state={removeState} />
+      <button className="button secondary" disabled={removePending}>{removePending ? "Removing…" : "Remove photo"}</button>
+    </form>}
+  </>;
 }
 
 export function EmailForm({ email }: { email: string }) {

@@ -2,8 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { registerGame, type GameFormState } from "./actions";
+import { PlayerIcon } from "../../player-icon";
 
-type Player = { id: number; displayName: string; avatar: string; currentRating: number };
+type Player = { id: number; displayName: string; avatar: string; avatarImageUrl: string | null; currentRating: number };
 
 export function GameForm({ players, today }: { players: Player[]; today: string }) {
   const [state, action, pending] = useActionState(registerGame, {} as GameFormState);
@@ -12,13 +13,26 @@ export function GameForm({ players, today }: { players: Player[]; today: string 
   return (
     <form action={action} className="game-form">
       <div className="form-grid">
-        <label>Player one<select name="playerOneId" value={playerOneId} onChange={(event) => setPlayerOneId(event.target.value)} required>
-          {players.map((player) => <option key={player.id} value={player.id}>{player.avatar} {player.displayName} · {player.currentRating}</option>)}
-        </select></label>
+        <fieldset><legend>Player one</legend><div className="player-picker">
+          {players.map((player) => <label key={player.id}>
+            <input
+              type="radio"
+              name="playerOneId"
+              value={player.id}
+              checked={String(player.id) === playerOneId}
+              onChange={(event) => setPlayerOneId(event.target.value)}
+              required
+            />
+            <span><PlayerIcon player={player} className="avatar-inline" /> {player.displayName} · {player.currentRating}</span>
+          </label>)}
+        </div></fieldset>
         <span className="versus">VS</span>
-        <label>Player two<select name="playerTwoId" key={playerOneId} defaultValue={availableOpponents[0]?.id} required>
-          {availableOpponents.map((player) => <option key={player.id} value={player.id}>{player.avatar} {player.displayName} · {player.currentRating}</option>)}
-        </select></label>
+        <fieldset key={playerOneId}><legend>Player two</legend><div className="player-picker">
+          {availableOpponents.map((player, index) => <label key={player.id}>
+            <input type="radio" name="playerTwoId" value={player.id} defaultChecked={index === 0} required />
+            <span><PlayerIcon player={player} className="avatar-inline" /> {player.displayName} · {player.currentRating}</span>
+          </label>)}
+        </div></fieldset>
       </div>
       <fieldset><legend>Result</legend><div className="result-picker">
         <label><input type="radio" name="result" value="player_one" defaultChecked /><span>Player one wins</span></label>

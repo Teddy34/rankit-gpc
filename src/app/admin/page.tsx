@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { PlayerAdminControls } from "../player-admin-controls";
 import { AdminConsole } from "../admin-console";
+import { PlayerIcon } from "../player-icon";
 
 export default async function AdminPage() {
   const currentUser = await requireUser();
@@ -23,7 +24,7 @@ export default async function AdminPage() {
         <div className="panel-heading"><div><p className="eyebrow">Administration</p><h2 id="player-management-title">Player management</h2></div><span>{allPlayers.length} accounts</span></div>
         <div className="management-list">
           {allPlayers.map((player) => <article key={player.id}>
-            <span className="avatar" aria-hidden="true">{player.avatar}</span>
+            <PlayerIcon player={player} className="avatar" />
             <span className="player"><strong>{player.displayName}{player.id === currentUser.id ? " (you)" : ""}</strong><small>{player.retiredAt ? "Retired" : "Active"}{player.isAdmin ? " · Administrator" : ""}</small></span>
             {player.id === currentUser.id ? <span className="self-label">Managed by another admin</span> : <PlayerAdminControls player={{ id: player.id, displayName: player.displayName, isAdmin: player.isAdmin, retired: Boolean(player.retiredAt) }} />}
           </article>)}

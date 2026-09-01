@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { RatingHistoryPlayer } from "@/domain/rating-history";
+import { PlayerIcon } from "../player-icon";
 
 const width = 960;
 const height = 480;
@@ -46,7 +47,7 @@ export function RatingHistoryChart({ players, eventDates }: { players: RatingHis
         {players.map((player, index) => <label key={player.id}>
           <input type="checkbox" checked={selected.has(player.id)} onChange={() => togglePlayer(player.id)} />
           <i style={{ backgroundColor: colors[index % colors.length] }} />
-          <span>{player.avatar} {player.displayName}<small>{player.retired ? "Retired" : player.points.length ? "Active" : "No games"}</small></span>
+          <span><PlayerIcon player={player} className="avatar-inline" /> {player.displayName}<small>{player.retired ? "Retired" : player.points.length ? "Active" : "No games"}</small></span>
         </label>)}
       </div>
     </aside>
