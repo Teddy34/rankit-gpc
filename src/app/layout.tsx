@@ -7,6 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "GeoPostcodes Ranking",
   description: "The company pool Elo ladder",
+  robots: { index: false, follow: false },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
