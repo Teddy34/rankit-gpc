@@ -3,6 +3,7 @@ import type { AwardLevel } from "./monthly-award";
 export type AdminCommand =
   | { type: "help" }
   | { type: "list_players" }
+  | { type: "player_detail"; player: string }
   | { type: "retire"; player: string }
   | { type: "unretire"; player: string }
   | { type: "delete"; player: string; confirmed: boolean }
@@ -30,6 +31,11 @@ export function parseAdminCommand(input: string): ParsedAdminCommand {
   if (lower === "help" || lower === "helper" || lower === "?") return { ok: true, command: { type: "help" } };
   if (lower === "players" || lower === "players list" || lower === "list players") {
     return { ok: true, command: { type: "list_players" } };
+  }
+
+  if (lower.startsWith("player ")) {
+    const player = cleanArgument(command.slice("player ".length));
+    return player ? { ok: true, command: { type: "player_detail", player } } : { ok: false, message: "Usage: player <player>" };
   }
 
   for (const [prefix, type] of [["retire ", "retire"], ["unretire ", "unretire"]] as const) {

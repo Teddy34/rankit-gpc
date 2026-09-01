@@ -1,13 +1,14 @@
 "use server";
 
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { allowedDomains, auditLog, magicLinks, monthlyAwards, ratingResets, sessions, users } from "@/db/schema";
+import { allowedDomains, auditLog, games, magicLinks, monthlyAwards, ratingResets, sessions, users } from "@/db/schema";
 import { parseAdminCommand } from "@/domain/admin-command";
 import { isValidDomain } from "@/domain/email-domain";
-import { brusselsMonth, type AwardLevel } from "@/domain/monthly-award";
-import { todayInBrussels } from "@/lib/dates";
+import { brusselsMonth, describeAward, type AwardLevel } from "@/domain/monthly-award";
+import { dateInBrussels, todayInBrussels } from "@/lib/dates";
 import { configuredAllowedDomains } from "@/lib/allowed-domains";
 import { nextGlobalSequence, recalculateAllRatings } from "@/lib/rating-recalculation";
 import { requireUser } from "@/lib/auth";
@@ -19,6 +20,7 @@ const STREAK_FOR_LEVEL: Record<AwardLevel, number> = { bronze: 1, silver: 2, gol
 const helpMessage = [
   "Commands:",
   "  players                                    List player IDs, names, and emails",
+  "  player <player>                            Show a player's profile, awards, and last 10 games",
   "  retire <player>                            Retire a player",
   "  unretire <player>                           Restore a retired player",
   "  delete <player>                             Deactivate an account for good",
@@ -90,9 +92,43 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
 
   const target = await findPlayer(command.player);
   if (!target) return { status: "error", message: `Player not found: ${command.player}` };
-  const selfAllowed = new Set(["reset_elo", "set_award", "remove_award"]);
+  const selfAllowed = new Set(["player_detail", "reset_elo", "set_award", "remove_award"]);
   if (target.id === actor.id && !selfAllowed.has(command.type)) {
     return { status: "error", message: "You cannot retire or delete your own account." };
+  }
+
+  if (command.type === "player_detail") {
+    const awards = await db.select().from(monthlyAwards)
+      .where(and(eq(monthlyAwards.userId, target.id), isNull(monthlyAwards.deletedAt)))
+      .orderBy(asc(monthlyAwards.awardMonth)).all();
+    const one = alias(users, "player_one");
+    const two = alias(users, "player_two");
+    const recentGames = await db.select({ game: games, one, two }).from(games)
+      .innerJoin(one, eq(games.playerOneId, one.id)).innerJoin(two, eq(games.playerTwoId, two.id))
+      .where(and(isNull(games.deletedAt), or(eq(games.playerOneId, target.id), eq(games.playerTwoId, target.id))))
+      .orderBy(desc(games.playedOn), desc(games.sequence)).limit(10).all();
+
+    const lines = [
+      `${target.displayName} (#${target.id})${target.isAdmin ? " — Administrator" : ""}`,
+      `Email: ${target.email}`,
+      `Status: ${target.retiredAt ? `Retired since ${dateInBrussels(target.retiredAt)}` : "Active"}`,
+      `Rating: ${target.currentRating} (started at ${target.initialRating})`,
+      `Registered: ${dateInBrussels(target.createdAt)}`,
+      "",
+      "Awards:",
+      ...(awards.length === 0 ? ["  None"] : awards.map((award) =>
+        `  ${describeAward({ level: award.level, month: award.awardMonth, streak: award.streak })}`)),
+      "",
+      "Last 10 games:",
+      ...(recentGames.length === 0 ? ["  None"] : recentGames.map(({ game, one, two }) => {
+        const isPlayerOne = game.playerOneId === target.id;
+        const opponent = isPlayerOne ? two.displayName : one.displayName;
+        const delta = isPlayerOne ? game.playerOneDelta : game.playerTwoDelta;
+        const outcome = game.result === "draw" ? "draw" : (game.result === "player_one") === isPlayerOne ? "won" : "lost";
+        return `  ${game.playedOn}  vs ${opponent}  ${outcome}  ${delta > 0 ? "+" : ""}${delta}`;
+      })),
+    ];
+    return { status: "success", message: lines.join("\n") };
   }
 
   if (command.type === "retire" || command.type === "unretire") {
