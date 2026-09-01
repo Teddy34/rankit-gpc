@@ -88,7 +88,7 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
         details: { domain: command.domain, source: "admin_console" },
       }).run();
     });
-    revalidatePath("/settings");
+    revalidatePath("/admin");
     return { status: "success", message: `Allowed ${command.domain}.` };
   }
 

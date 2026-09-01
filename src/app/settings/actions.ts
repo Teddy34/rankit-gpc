@@ -97,7 +97,7 @@ export async function addAllowedDomain(_state: SettingsState, formData: FormData
       details: { domain },
     }).run();
   });
-  revalidatePath("/settings");
+  revalidatePath("/admin");
   return { status: "success", message: `${domain} is now allowed.` };
 }
 
@@ -120,6 +120,6 @@ export async function removeAllowedDomain(_state: SettingsState, formData: FormD
       details: { domain: domain.domain },
     }).run();
   });
-  revalidatePath("/settings");
+  revalidatePath("/admin");
   return { status: "success", message: `${domain.domain} was removed.` };
 }

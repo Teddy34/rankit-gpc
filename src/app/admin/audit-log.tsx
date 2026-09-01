@@ -52,8 +52,8 @@ export function AuditLog({ entries, page, totalPages }: { entries: AuditLogEntry
       })}
     </div>}
     {totalPages > 1 && <nav className="audit-pagination" aria-label="Audit log pagination">
-      {page > 1 ? <Link href={`/settings?auditPage=${page - 1}#audit-log`}>← Newer</Link> : <span />}
-      {page < totalPages && <Link href={`/settings?auditPage=${page + 1}#audit-log`}>Older →</Link>}
+      {page > 1 ? <Link href={`/admin?auditPage=${page - 1}#audit-log`}>← Newer</Link> : <span />}
+      {page < totalPages && <Link href={`/admin?auditPage=${page + 1}#audit-log`}>Older →</Link>}
     </nav>}
   </section>;
 }
