@@ -3,7 +3,7 @@ import "server-only";
 import { and, asc, desc, eq, isNull, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { games, monthlyAwards, ratingResets, users } from "@/db/schema";
-import { awardLevelForStreak, brusselsMonth, monthsAfter, previousMonth } from "@/domain/monthly-award";
+import { awardLevelForStreak, brusselsMonth, monthsAfter, previousMonth, type MonthlyAward } from "@/domain/monthly-award";
 import { replayRatings } from "@/domain/rating-replay";
 
 async function awardLeaderForMonth(awardMonth: string) {
@@ -67,9 +67,12 @@ export async function ensureMonthlyAwards(now = new Date()): Promise<void> {
   }
 }
 
-export async function awardsByPlayer(): Promise<Map<number, Array<"bronze" | "silver" | "gold">>> {
+export async function awardsByPlayer(): Promise<Map<number, MonthlyAward[]>> {
   const awards = await db.select().from(monthlyAwards).orderBy(asc(monthlyAwards.awardMonth)).all();
-  const grouped = new Map<number, Array<"bronze" | "silver" | "gold">>();
-  for (const award of awards) grouped.set(award.userId, [...(grouped.get(award.userId) ?? []), award.level]);
+  const grouped = new Map<number, MonthlyAward[]>();
+  for (const award of awards) {
+    const entry = { level: award.level, month: award.awardMonth, streak: award.streak };
+    grouped.set(award.userId, [...(grouped.get(award.userId) ?? []), entry]);
+  }
   return grouped;
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { asc, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { games, users } from "@/db/schema";
+import { describeAward } from "@/domain/monthly-award";
 import { brusselsWeekStart, calculateWeeklyTrends } from "@/domain/weekly-trend";
 import { calculateWinningStreaks } from "@/domain/winning-streak";
 import { requireUser } from "@/lib/auth";
@@ -52,7 +53,7 @@ export default async function RankingPage() {
             <li key={player.id}>
               <strong className="rank">{index + 1}</strong>
               <span className="avatar" aria-hidden="true">{player.avatar}</span>
-              <span className="player"><strong>{player.displayName}{player.isAdmin && <span className="admin-badge" role="img" aria-label="Administrator" title="Administrator">👮</span>}{winningStreak >= 3 && <span className="fire-badge" role="img" aria-label={`${winningStreak}-game winning streak`} title={`${winningStreak}-game winning streak`}>🔥</span>}</strong><small>{player.retiredAt ? "Retired" : "Active player"}</small>{(playerAwards.get(player.id)?.length ?? 0) > 0 && <span className="award-badges" aria-label={`Monthly awards: ${playerAwards.get(player.id)!.join(", ")}`}>{playerAwards.get(player.id)!.map((award, awardIndex) => <span aria-hidden="true" title={`${award[0].toUpperCase()}${award.slice(1)} monthly award`} key={`${award}-${awardIndex}`}>{award === "bronze" ? "🥉" : award === "silver" ? "🥈" : "🥇"}</span>)}</span>}</span>
+              <span className="player"><strong>{player.displayName}{player.isAdmin && <span className="admin-badge" role="img" aria-label="Administrator" title="Administrator">👮</span>}{winningStreak >= 3 && <span className="fire-badge" role="img" aria-label={`${winningStreak}-game winning streak`} title={`${winningStreak}-game winning streak`}>🔥</span>}</strong><small>{player.retiredAt ? "Retired" : "Active player"}</small>{(playerAwards.get(player.id)?.length ?? 0) > 0 && <span className="award-badges" aria-label={`Monthly awards: ${playerAwards.get(player.id)!.map((award) => describeAward(award)).join("; ")}`}>{playerAwards.get(player.id)!.map((award) => <span aria-hidden="true" title={describeAward(award)} key={award.month}>{award.level === "bronze" ? "🥉" : award.level === "silver" ? "🥈" : "🥇"}</span>)}</span>}</span>
               <strong className="rating">{player.currentRating}</strong>
               <span className="trend">{trend > 0 ? "+" : ""}{trend}</span>
             </li>

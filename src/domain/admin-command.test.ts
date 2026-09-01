@@ -38,6 +38,41 @@ describe("parseAdminCommand", () => {
     });
   });
 
+  it("accepts an award set with an explicit month", () => {
+    expect(parseAdminCommand('award set "Ada Lovelace" gold 2026-07')).toEqual({
+      ok: true,
+      command: { type: "set_award", player: "Ada Lovelace", level: "gold", month: "2026-07" },
+    });
+  });
+
+  it("rejects an award set missing the month", () => {
+    expect(parseAdminCommand("award set Ada gold")).toEqual({
+      ok: false,
+      message: "Usage: award set <player> <bronze|silver|gold> <yyyy-mm>",
+    });
+  });
+
+  it("rejects an invalid award level", () => {
+    expect(parseAdminCommand("award set Ada platinum 2026-07")).toEqual({
+      ok: false,
+      message: "Usage: award set <player> <bronze|silver|gold> <yyyy-mm>",
+    });
+  });
+
+  it("accepts an award removal with an explicit month", () => {
+    expect(parseAdminCommand('award remove "Ada Lovelace" 2026-07')).toEqual({
+      ok: true,
+      command: { type: "remove_award", player: "Ada Lovelace", month: "2026-07" },
+    });
+  });
+
+  it("rejects an award removal missing the month", () => {
+    expect(parseAdminCommand("award remove 42")).toEqual({
+      ok: false,
+      message: "Usage: award remove <player> <yyyy-mm>",
+    });
+  });
+
   it("accepts a domain", () => {
     expect(parseAdminCommand("domain add Example.COM")).toEqual({
       ok: true,

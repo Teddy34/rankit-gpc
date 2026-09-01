@@ -1,3 +1,5 @@
+import type { AwardLevel } from "./monthly-award";
+
 export type AdminCommand =
   | { type: "help" }
   | { type: "list_players" }
@@ -5,6 +7,8 @@ export type AdminCommand =
   | { type: "unretire"; player: string }
   | { type: "delete"; player: string; confirmed: boolean }
   | { type: "reset_elo"; player: string; rating: number }
+  | { type: "set_award"; player: string; level: AwardLevel; month: string }
+  | { type: "remove_award"; player: string; month: string }
   | { type: "add_domain"; domain: string };
 
 export type ParsedAdminCommand =
@@ -54,6 +58,22 @@ export function parseAdminCommand(input: string): ParsedAdminCommand {
       return { ok: false, message: "Elo must be a whole number from 1000 to 2000." };
     }
     return { ok: true, command: { type: "reset_elo", player, rating } };
+  }
+
+  if (lower.startsWith("award set ")) {
+    const argument = command.slice("award set ".length);
+    const match = argument.match(/\s+(bronze|silver|gold)\s+(\d{4}-\d{2})$/i);
+    const player = cleanArgument(match ? argument.slice(0, match.index) : argument);
+    if (!player || !match) return { ok: false, message: "Usage: award set <player> <bronze|silver|gold> <yyyy-mm>" };
+    return { ok: true, command: { type: "set_award", player, level: match[1].toLocaleLowerCase("en-US") as AwardLevel, month: match[2] } };
+  }
+
+  if (lower.startsWith("award remove ")) {
+    const argument = command.slice("award remove ".length);
+    const match = argument.match(/\s+(\d{4}-\d{2})$/);
+    const player = cleanArgument(match ? argument.slice(0, match.index) : argument);
+    if (!player || !match) return { ok: false, message: "Usage: award remove <player> <yyyy-mm>" };
+    return { ok: true, command: { type: "remove_award", player, month: match[1] } };
   }
 
   if (lower.startsWith("domain add ")) {

@@ -3,9 +3,10 @@
 import { asc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { allowedDomains, auditLog, magicLinks, ratingResets, sessions, users } from "@/db/schema";
+import { allowedDomains, auditLog, magicLinks, monthlyAwards, ratingResets, sessions, users } from "@/db/schema";
 import { parseAdminCommand } from "@/domain/admin-command";
 import { isValidDomain } from "@/domain/email-domain";
+import { brusselsMonth, type AwardLevel } from "@/domain/monthly-award";
 import { todayInBrussels } from "@/lib/dates";
 import { configuredAllowedDomains } from "@/lib/allowed-domains";
 import { nextGlobalSequence, recalculateAllRatings } from "@/lib/rating-recalculation";
@@ -13,16 +14,21 @@ import { requireUser } from "@/lib/auth";
 
 export type AdminConsoleResult = { status: "success" | "error" | "confirm"; message: string };
 
+const STREAK_FOR_LEVEL: Record<AwardLevel, number> = { bronze: 1, silver: 2, gold: 3 };
+
 const helpMessage = [
   "Commands:",
-  "  players                         List player IDs, names, and emails",
-  "  retire <player>                 Retire a player",
-  "  unretire <player>               Restore a retired player",
-  "  delete <player>                 Deactivate an account for good",
-  "  elo reset <player> [to <elo>]   Set current Elo; default 1500",
-  "  domain add <domain>              Allow an email domain",
-  "  help | helper | ?                Show this help",
+  "  players                                    List player IDs, names, and emails",
+  "  retire <player>                            Retire a player",
+  "  unretire <player>                           Restore a retired player",
+  "  delete <player>                             Deactivate an account for good",
+  "  elo reset <player> [to <elo>]               Set current Elo; default 1500",
+  "  award set <player> <bronze|silver|gold> <yyyy-mm>   Set a monthly award",
+  "  award remove <player> <yyyy-mm>             Remove a monthly award",
+  "  domain add <domain>                         Allow an email domain",
+  "  help | helper | ?                           Show this help",
   "Player may be an ID, email, or exact display name. Quote names with spaces.",
+  "Each month has one award. Setting one for a month replaces whoever held it.",
 ].join("\n");
 
 async function findPlayer(selector: string) {
@@ -84,7 +90,8 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
 
   const target = await findPlayer(command.player);
   if (!target) return { status: "error", message: `Player not found: ${command.player}` };
-  if (target.id === actor.id && command.type !== "reset_elo") {
+  const selfAllowed = new Set(["reset_elo", "set_award", "remove_award"]);
+  if (target.id === actor.id && !selfAllowed.has(command.type)) {
     return { status: "error", message: "You cannot retire or delete your own account." };
   }
 
@@ -137,6 +144,55 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
     revalidatePath("/games");
     revalidatePath("/history");
     return { status: "success", message: `Set ${target.displayName}'s Elo to ${command.rating}.` };
+  }
+
+  if (command.type === "set_award") {
+    const { month } = command;
+    if (month > brusselsMonth()) return { status: "error", message: "Cannot set an award for a future month." };
+    const streak = STREAK_FOR_LEVEL[command.level];
+    const previous = await db.select().from(monthlyAwards).where(eq(monthlyAwards.awardMonth, month)).get();
+    await db.transaction(async (tx) => {
+      await tx.insert(monthlyAwards).values({ awardMonth: month, userId: target.id, level: command.level, streak })
+        .onConflictDoUpdate({
+          target: monthlyAwards.awardMonth,
+          set: { userId: target.id, level: command.level, streak, awardedAt: new Date() },
+        }).run();
+      await tx.insert(auditLog).values({
+        actorId: actor.id,
+        action: "award.set",
+        entityType: "monthly_award",
+        entityId: month,
+        details: {
+          displayName: target.displayName,
+          level: command.level,
+          month,
+          previousUserId: previous?.userId ?? null,
+          previousLevel: previous?.level ?? null,
+          source: "admin_console",
+        },
+      }).run();
+    });
+    revalidatePath("/");
+    return { status: "success", message: `Set the ${month} award to ${command.level} for ${target.displayName}.` };
+  }
+
+  if (command.type === "remove_award") {
+    const { month } = command;
+    const existing = await db.select().from(monthlyAwards).where(eq(monthlyAwards.awardMonth, month)).get();
+    if (!existing) return { status: "error", message: `No award recorded for ${month}.` };
+    if (existing.userId !== target.id) return { status: "error", message: `${target.displayName} does not hold the ${month} award.` };
+    await db.transaction(async (tx) => {
+      await tx.delete(monthlyAwards).where(eq(monthlyAwards.awardMonth, month)).run();
+      await tx.insert(auditLog).values({
+        actorId: actor.id,
+        action: "award.removed",
+        entityType: "monthly_award",
+        entityId: month,
+        details: { displayName: target.displayName, level: existing.level, month, source: "admin_console" },
+      }).run();
+    });
+    revalidatePath("/");
+    return { status: "success", message: `Removed the ${month} award from ${target.displayName}.` };
   }
 
   if (!command.confirmed) {
