@@ -147,6 +147,7 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
       }).run();
     });
     revalidatePath("/");
+    revalidatePath("/admin");
     return { status: "success", message: `${retiredAt ? "Retired" : "Restored"} ${target.displayName}.` };
   }
 
@@ -258,6 +259,7 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
     }).run();
   });
   revalidatePath("/");
+  revalidatePath("/admin");
   revalidatePath("/games");
   revalidatePath("/settings");
   revalidatePath("/history");

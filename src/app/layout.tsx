@@ -20,6 +20,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <Link href="/">Ranking</Link>
             <Link href="/history">History</Link>
             <Link href="/games">Games</Link>
+            {user.isAdmin && <Link href="/admin">Administration</Link>}
             <Link href="/settings" aria-label="Settings">{user.avatar} Settings</Link>
             <form action="/logout" method="post"><button className="nav-button">Sign out</button></form>
           </nav>}

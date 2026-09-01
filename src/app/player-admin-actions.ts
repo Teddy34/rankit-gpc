@@ -44,5 +44,6 @@ export async function updatePlayerAdministration(_state: PlayerAdminState, formD
     }).run();
   });
   revalidatePath("/");
+  revalidatePath("/admin");
   return { status: "success", message: "Updated." };
 }
