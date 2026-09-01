@@ -4,6 +4,7 @@ import { and, count, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { magicLinks, users } from "@/db/schema";
 import { isDomainAllowed } from "@/lib/allowed-domains";
+import { appUrl } from "@/lib/app-url";
 import { createToken, hashToken, normalizeEmail } from "@/lib/auth";
 import { sendMagicLinkEmail } from "@/lib/email";
 
@@ -35,9 +36,8 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   }).run();
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   try {
-    await sendMagicLinkEmail({ to: email, url: `${appUrl}/auth/callback?token=${encodeURIComponent(token)}` });
+    await sendMagicLinkEmail({ to: email, url: `${appUrl()}/auth/callback?token=${encodeURIComponent(token)}` });
   } catch (error) {
     await db.delete(magicLinks).where(eq(magicLinks.tokenHash, tokenHash)).run();
     console.error(`[email] Failed to send a sign-in link to ${email}`, error);

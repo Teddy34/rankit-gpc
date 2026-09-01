@@ -9,6 +9,7 @@ import { avatarImageContentType, detectImageFormat, MAX_AVATAR_IMAGE_BYTES } fro
 import { isValidDomain, normalizeDomain } from "@/domain/email-domain";
 import { profileAvatars } from "@/domain/profile";
 import { configuredAllowedDomains, isDomainAllowed } from "@/lib/allowed-domains";
+import { appUrl } from "@/lib/app-url";
 import { createToken, hashToken, normalizeEmail, requireUser } from "@/lib/auth";
 import { deleteAvatarImage, uploadAvatarImage } from "@/lib/avatar-storage";
 import { sendEmailChangeEmail } from "@/lib/email";
@@ -69,9 +70,8 @@ export async function requestEmailChange(_state: SettingsState, formData: FormDa
   const token = createToken();
   await db.delete(emailChanges).where(eq(emailChanges.userId, user.id)).run();
   const pendingChange = await db.insert(emailChanges).values({ userId: user.id, newEmail, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }).returning({ id: emailChanges.id }).get();
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   try {
-    await sendEmailChangeEmail({ to: newEmail, url: `${appUrl}/settings/email/callback?token=${encodeURIComponent(token)}` });
+    await sendEmailChangeEmail({ to: newEmail, url: `${appUrl()}/settings/email/callback?token=${encodeURIComponent(token)}` });
   } catch (error) {
     await db.delete(emailChanges).where(eq(emailChanges.id, pendingChange.id)).run();
     console.error(`[email] Failed to send an email-change confirmation to ${newEmail}`, error);
