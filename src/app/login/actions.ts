@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { magicLinks, users } from "@/db/schema";
 import { isDomainAllowed } from "@/lib/allowed-domains";
 import { appUrl } from "@/lib/app-url";
-import { createToken, hashToken, normalizeEmail } from "@/lib/auth";
+import { createToken, hashToken, normalizeEmail, rememberLoginEmail } from "@/lib/auth";
 import { sendMagicLinkEmail } from "@/lib/email";
 
 export type LoginState = { status?: "sent" | "error"; message?: string };
@@ -15,6 +15,7 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
   if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) {
     return { status: "error", message: "Enter a valid email address." };
   }
+  await rememberLoginEmail(email);
 
   const domain = email.split("@")[1];
   const [{ userCount }] = await db.select({ userCount: count() }).from(users).all();
