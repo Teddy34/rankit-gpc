@@ -9,6 +9,8 @@ import { sessions, users } from "@/db/schema";
 
 const SESSION_COOKIE = "rankit_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+const LAST_EMAIL_COOKIE = "rankit_last_email";
+const LAST_EMAIL_DURATION_MS = 365 * 24 * 60 * 60 * 1000;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLocaleLowerCase("en-US");
@@ -54,6 +56,24 @@ export async function getCurrentUser() {
     .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, new Date())))
     .get();
   return row?.user ?? null;
+}
+
+// Remembers the last email a visitor typed on the login form, purely as a
+// time-saving default for their next sign-in — it's never treated as proof
+// of identity, so there's no harm in it surviving unverified.
+export async function rememberLoginEmail(email: string): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(LAST_EMAIL_COOKIE, email, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(Date.now() + LAST_EMAIL_DURATION_MS),
+  });
+}
+
+export async function getRememberedLoginEmail(): Promise<string | null> {
+  return (await cookies()).get(LAST_EMAIL_COOKIE)?.value ?? null;
 }
 
 export async function requireUser() {
