@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildRatingHistory } from "./rating-history";
 
 const players = [
-  { id: 1, displayName: "Amy", avatar: "🎱", initialRating: 1500, retired: false },
-  { id: 2, displayName: "Zoe", avatar: "🦊", initialRating: 1500, retired: false },
-  { id: 3, displayName: "No games", avatar: "👻", initialRating: 1600, retired: true },
+  { id: 1, displayName: "Amy", avatar: "🎱", avatarImageUrl: null, initialRating: 1500, retired: false },
+  { id: 2, displayName: "Zoe", avatar: "🦊", avatarImageUrl: null, initialRating: 1500, retired: false },
+  { id: 3, displayName: "No games", avatar: "👻", avatarImageUrl: null, initialRating: 1600, retired: true },
 ];
 
 describe("rating history", () => {

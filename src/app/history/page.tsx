@@ -28,6 +28,7 @@ export default async function HistoryPage() {
     id: player.id,
     displayName: player.displayName,
     avatar: player.avatar,
+    avatarImageUrl: player.avatarImageUrl,
     initialRating: player.initialRating,
     retired: Boolean(player.retiredAt),
   })), activeGames, activeResets);

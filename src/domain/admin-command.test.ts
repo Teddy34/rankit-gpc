@@ -80,6 +80,20 @@ describe("parseAdminCommand", () => {
     });
   });
 
+  it("accepts an avatar reset", () => {
+    expect(parseAdminCommand('avatar reset "Ada Lovelace"')).toEqual({
+      ok: true,
+      command: { type: "avatar_reset", player: "Ada Lovelace" },
+    });
+  });
+
+  it("rejects an avatar reset missing the player", () => {
+    expect(parseAdminCommand('avatar reset ""')).toEqual({
+      ok: false,
+      message: "Usage: avatar reset <player>",
+    });
+  });
+
   it("accepts a domain", () => {
     expect(parseAdminCommand("domain add Example.COM")).toEqual({
       ok: true,

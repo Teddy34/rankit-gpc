@@ -4,6 +4,7 @@ import { and, count, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { magicLinks, users } from "@/db/schema";
 import { isDomainAllowed } from "@/lib/allowed-domains";
+import { appUrl } from "@/lib/app-url";
 import { createToken, hashToken, normalizeEmail } from "@/lib/auth";
 import { sendMagicLinkEmail } from "@/lib/email";
 
@@ -20,12 +21,22 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
   const domainAllowed = await isDomainAllowed(domain);
 
   // The first account bootstraps administration; all later registrations are restricted.
-  if (userCount > 0 && !domainAllowed) return { status: "sent" };
+  // The response stays identical to a real send either way, so this domain doesn't leak
+  // to whoever's asking — but that also means a legitimate blocked sign-in leaves no trace
+  // anywhere else, so it's worth a log line here.
+  if (userCount > 0 && !domainAllowed) {
+    console.info(`[login] Rejected sign-in for ${email}: domain "${domain}" is not allowed.`);
+    return { status: "sent" };
+  }
 
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  const recentLink = await db.select({ id: magicLinks.id }).from(magicLinks)
-    .where(and(eq(magicLinks.email, email), gt(magicLinks.createdAt, tenMinutesAgo))).get();
-  if (recentLink) return { status: "sent" };
+  const resendCooldownStart = new Date(Date.now() - 2 * 60 * 1000);
+  const recentLink = await db.select({ id: magicLinks.id, createdAt: magicLinks.createdAt }).from(magicLinks)
+    .where(and(eq(magicLinks.email, email), gt(magicLinks.createdAt, resendCooldownStart))).get();
+  if (recentLink) {
+    const secondsAgo = Math.round((Date.now() - recentLink.createdAt.getTime()) / 1000);
+    console.info(`[login] Skipped resend for ${email}: a link was already sent ${secondsAgo}s ago.`);
+    return { status: "sent" };
+  }
 
   const token = createToken();
   const tokenHash = hashToken(token);
@@ -35,9 +46,8 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   }).run();
 
-  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   try {
-    await sendMagicLinkEmail({ to: email, url: `${appUrl}/auth/callback?token=${encodeURIComponent(token)}` });
+    await sendMagicLinkEmail({ to: email, url: `${appUrl()}/auth/callback?token=${encodeURIComponent(token)}` });
   } catch (error) {
     await db.delete(magicLinks).where(eq(magicLinks.tokenHash, tokenHash)).run();
     console.error(`[email] Failed to send a sign-in link to ${email}`, error);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { addAllowedDomain, removeAllowedDomain, type SettingsState } from "./actions";
+import { addAllowedDomain, removeAllowedDomain, type SettingsState } from "../settings/actions";
 
 type Domain = { id: number; domain: string };
 const initialState: SettingsState = {};

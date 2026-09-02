@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { games, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { DeleteGameButton } from "./delete-game-button";
+import { PlayerIcon } from "../player-icon";
 
 export default async function GamesPage({ searchParams }: { searchParams: Promise<{ registered?: string; deleted?: string }> }) {
   const currentUser = await requireUser();
@@ -21,9 +22,9 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
     <section className="panel game-list"><div className="panel-heading"><h2>Results</h2><span>{history.length} games</span></div>
       {history.length === 0 ? <p className="empty-state">No games yet. Time to claim the table.</p> : history.map(({ game, one, two }) => <article className={currentUser.isAdmin ? "has-actions" : undefined} key={game.id}>
         <time dateTime={game.playedOn}>{game.playedOn}</time>
-        <span className={game.result === "player_one" ? "winner" : ""}>{one.avatar} <strong>{one.displayName}</strong> <em>{game.playerOneDelta > 0 ? "+" : ""}{game.playerOneDelta}</em></span>
+        <span className={game.result === "player_one" ? "winner" : ""}><PlayerIcon player={one} className="avatar-inline" /> <strong>{one.displayName}</strong> <em>{game.playerOneDelta > 0 ? "+" : ""}{game.playerOneDelta}</em></span>
         <b>{game.result === "draw" ? "DRAW" : "VS"}</b>
-        <span className={game.result === "player_two" ? "winner" : ""}>{two.avatar} <strong>{two.displayName}</strong> <em>{game.playerTwoDelta > 0 ? "+" : ""}{game.playerTwoDelta}</em></span>
+        <span className={game.result === "player_two" ? "winner" : ""}><PlayerIcon player={two} className="avatar-inline" /> <strong>{two.displayName}</strong> <em>{game.playerTwoDelta > 0 ? "+" : ""}{game.playerTwoDelta}</em></span>
         {currentUser.isAdmin && <DeleteGameButton gameId={game.id} label={`${one.displayName} vs ${two.displayName} on ${game.playedOn}`} />}
       </article>)}
     </section>

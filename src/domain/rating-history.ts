@@ -4,6 +4,7 @@ export type RatingHistoryPlayer = {
   id: number;
   displayName: string;
   avatar: string;
+  avatarImageUrl: string | null;
   retired: boolean;
   points: RatingHistoryPoint[];
 };
@@ -19,6 +20,7 @@ type HistoryPlayer = {
   id: number;
   displayName: string;
   avatar: string;
+  avatarImageUrl: string | null;
   initialRating: number;
   retired: boolean;
 };
@@ -67,6 +69,7 @@ export function buildRatingHistory(players: HistoryPlayer[], games: ReplayGame[]
     id: player.id,
     displayName: player.displayName,
     avatar: player.avatar,
+    avatarImageUrl: player.avatarImageUrl,
     retired: player.retired,
     points: points.get(player.id) ?? [],
   }));

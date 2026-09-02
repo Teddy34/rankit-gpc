@@ -10,6 +10,7 @@ import { isValidDomain } from "@/domain/email-domain";
 import { brusselsMonth, describeAward, type AwardLevel } from "@/domain/monthly-award";
 import { dateInBrussels, todayInBrussels } from "@/lib/dates";
 import { configuredAllowedDomains } from "@/lib/allowed-domains";
+import { deleteAvatarImage } from "@/lib/avatar-storage";
 import { nextGlobalSequence, recalculateAllRatings } from "@/lib/rating-recalculation";
 import { requireUser } from "@/lib/auth";
 
@@ -27,6 +28,7 @@ const helpMessage = [
   "  elo reset <player> [to <elo>]               Set current Elo; default 1500",
   "  award set <player> <bronze|silver|gold> <yyyy-mm>   Set a monthly award",
   "  award remove <player> <yyyy-mm>             Remove a monthly award",
+  "  avatar reset <player>                       Reset a player's custom photo back to their emoji",
   "  domain add <domain>                         Allow an email domain",
   "  help | helper | ?                           Show this help",
   "Player may be an ID, email, or exact display name. Quote names with spaces.",
@@ -86,13 +88,13 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
         details: { domain: command.domain, source: "admin_console" },
       }).run();
     });
-    revalidatePath("/settings");
+    revalidatePath("/admin");
     return { status: "success", message: `Allowed ${command.domain}.` };
   }
 
   const target = await findPlayer(command.player);
   if (!target) return { status: "error", message: `Player not found: ${command.player}` };
-  const selfAllowed = new Set(["player_detail", "reset_elo", "set_award", "remove_award"]);
+  const selfAllowed = new Set(["player_detail", "reset_elo", "set_award", "remove_award", "avatar_reset"]);
   if (target.id === actor.id && !selfAllowed.has(command.type)) {
     return { status: "error", message: "You cannot retire or delete your own account." };
   }
@@ -230,6 +232,26 @@ export async function runAdminCommand(rawCommand: string): Promise<AdminConsoleR
     });
     revalidatePath("/");
     return { status: "success", message: `Removed the ${month} award from ${target.displayName}.` };
+  }
+
+  if (command.type === "avatar_reset") {
+    if (!target.avatarImageUrl) return { status: "error", message: `${target.displayName} has no custom photo.` };
+    const previousUrl = target.avatarImageUrl;
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ avatarImageUrl: null }).where(eq(users.id, target.id)).run();
+      await tx.insert(auditLog).values({
+        actorId: actor.id,
+        action: "avatar.reset",
+        entityType: "user",
+        entityId: String(target.id),
+        details: { displayName: target.displayName, source: "admin_console" },
+      }).run();
+    });
+    await deleteAvatarImage(previousUrl);
+    revalidatePath("/");
+    revalidatePath("/games");
+    revalidatePath("/history");
+    return { status: "success", message: `Reset ${target.displayName}'s photo back to their emoji.` };
   }
 
   if (!command.confirmed) {
