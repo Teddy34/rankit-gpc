@@ -5,9 +5,10 @@ import { registerGame, type GameFormState } from "./actions";
 
 type Player = { id: number; displayName: string; avatar: string; currentRating: number };
 
-export function GameForm({ players, today }: { players: Player[]; today: string }) {
+export function GameForm({ players, today, defaultPlayerOneId }: { players: Player[]; today: string; defaultPlayerOneId?: number }) {
   const [state, action, pending] = useActionState(registerGame, {} as GameFormState);
-  const [playerOneId, setPlayerOneId] = useState(String(players[0]?.id ?? ""));
+  const initialPlayerOneId = players.some((player) => player.id === defaultPlayerOneId) ? defaultPlayerOneId : players[0]?.id;
+  const [playerOneId, setPlayerOneId] = useState(String(initialPlayerOneId ?? ""));
   const availableOpponents = players.filter((player) => String(player.id) !== playerOneId);
   return (
     <form action={action} className="game-form">
