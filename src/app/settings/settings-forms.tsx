@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import type { ClipboardEvent } from "react";
 import { profileAvatars } from "@/domain/profile";
 import { PlayerIcon } from "../player-icon";
@@ -17,28 +17,54 @@ function Feedback({ state }: { state: SettingsState }) {
 function PhotoUploadForm({ user }: { user: UserSettings }) {
   const [photoState, photoAction, photoPending] = useActionState(uploadAvatar, initialState);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedName, setSelectedName] = useState<string | null>(null);
 
-  // A document-wide listener only fires if something happens to already be focused; a
-  // paste needs somewhere to land. This zone is that somewhere: click it (or tab to it)
-  // and paste goes straight into the file input via a synthesized DataTransfer.
-  function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
-    const item = Array.from(event.clipboardData.items).find((entry) => entry.type.startsWith("image/"));
-    const file = item?.getAsFile();
+  // A successful save changes user.avatarImageUrl (a fresh round-trip from the server, via
+  // revalidatePath) -- that's the authoritative signal a pending selection is now saved, so
+  // reset against it directly during render rather than chasing it from an effect.
+  const [lastSavedUrl, setLastSavedUrl] = useState(user.avatarImageUrl);
+  if (user.avatarImageUrl !== lastSavedUrl) {
+    setLastSavedUrl(user.avatarImageUrl);
+    setSelectedName(null);
+  }
+
+  function applyFile(file: File) {
     const input = fileInputRef.current;
-    if (!file || !input) return;
+    if (!input) return;
     const transfer = new DataTransfer();
     transfer.items.add(file);
     input.files = transfer.files;
+    setSelectedName(file.name || "Pasted image");
+  }
+
+  // A paste event only fires reliably on a genuinely editable element (input/textarea/
+  // contenteditable) -- a plain focusable <div> is not guaranteed to receive it at all in
+  // every browser, which is why the previous version of this didn't actually work. A real
+  // (visually disguised) text input sidesteps that entirely.
+  function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
     event.preventDefault();
+    const item = Array.from(event.clipboardData.items).find((entry) => entry.type.startsWith("image/"));
+    const file = item?.getAsFile();
+    if (file) applyFile(file);
   }
 
   return <form action={photoAction} className="settings-form">
     <PlayerIcon player={user} className="avatar" />
     <label htmlFor="avatarImage">Custom photo (PNG, JPEG, or GIF, up to 2MB)</label>
-    <input ref={fileInputRef} id="avatarImage" name="avatarImage" type="file" accept="image/png,image/jpeg,image/gif" required />
-    <div className="paste-zone" tabIndex={0} onPaste={handlePaste}>Or click here and paste an image (Ctrl+V / Cmd+V)</div>
+    <input
+      key={user.avatarImageUrl ?? "none"}
+      ref={fileInputRef}
+      id="avatarImage"
+      name="avatarImage"
+      type="file"
+      accept="image/png,image/jpeg,image/gif"
+      required
+      onChange={(event) => setSelectedName(event.target.files?.[0]?.name ?? null)}
+    />
+    <input type="text" className="paste-zone" placeholder="Or click here and paste an image (Ctrl+V / Cmd+V)" onPaste={handlePaste} />
+    {selectedName && <p className="form-success">✓ Ready to upload: {selectedName}</p>}
     <Feedback state={photoState} />
-    <button className="button secondary" disabled={photoPending}>{photoPending ? "Uploading…" : "Upload photo"}</button>
+    <button className="button secondary" disabled={photoPending}>{photoPending ? "Uploading…" : selectedName ? `Upload ${selectedName}` : "Upload photo"}</button>
   </form>;
 }
 
