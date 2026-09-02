@@ -29,10 +29,14 @@ export async function requestMagicLink(_state: LoginState, formData: FormData): 
     return { status: "sent" };
   }
 
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  const recentLink = await db.select({ id: magicLinks.id }).from(magicLinks)
-    .where(and(eq(magicLinks.email, email), gt(magicLinks.createdAt, tenMinutesAgo))).get();
-  if (recentLink) return { status: "sent" };
+  const resendCooldownStart = new Date(Date.now() - 2 * 60 * 1000);
+  const recentLink = await db.select({ id: magicLinks.id, createdAt: magicLinks.createdAt }).from(magicLinks)
+    .where(and(eq(magicLinks.email, email), gt(magicLinks.createdAt, resendCooldownStart))).get();
+  if (recentLink) {
+    const secondsAgo = Math.round((Date.now() - recentLink.createdAt.getTime()) / 1000);
+    console.info(`[login] Skipped resend for ${email}: a link was already sent ${secondsAgo}s ago.`);
+    return { status: "sent" };
+  }
 
   const token = createToken();
   const tokenHash = hashToken(token);
