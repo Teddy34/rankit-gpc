@@ -66,7 +66,6 @@ function PhotoUploadForm({ user }: { user: UserSettings }) {
       onChange={(event) => setSelectedName(event.target.files?.[0]?.name ?? null)}
     />
     <input type="text" className="paste-zone" placeholder="Or click here and paste an image (Ctrl+V / Cmd+V)" onPaste={handlePaste} />
-    {selectedName && <p className="form-success">✓ Ready to upload: {selectedName}</p>}
     <Feedback state={photoState} />
     <button className={selectedName ? "button" : "button secondary"} disabled={photoPending || !selectedName}>{photoPending ? "Uploading…" : selectedName ? `Upload ${selectedName}` : "Choose or paste a photo first"}</button>
   </form>;
