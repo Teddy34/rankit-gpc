@@ -44,8 +44,12 @@ function PhotoUploadForm({ user }: { user: UserSettings }) {
   function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
     event.preventDefault();
     const item = Array.from(event.clipboardData.items).find((entry) => entry.type.startsWith("image/"));
-    const file = item?.getAsFile();
-    if (file) applyFile(file);
+    const original = item?.getAsFile();
+    if (!original) return;
+    // Clipboard images almost always arrive named "image.png" regardless of their real
+    // format -- rename to match the actual type so the filename means something.
+    const extension = original.type.split("/")[1] || "png";
+    applyFile(new File([original], `pasted.${extension}`, { type: original.type }));
   }
 
   return <form action={photoAction} className="settings-form">
@@ -64,7 +68,7 @@ function PhotoUploadForm({ user }: { user: UserSettings }) {
     <input type="text" className="paste-zone" placeholder="Or click here and paste an image (Ctrl+V / Cmd+V)" onPaste={handlePaste} />
     {selectedName && <p className="form-success">✓ Ready to upload: {selectedName}</p>}
     <Feedback state={photoState} />
-    <button className="button secondary" disabled={photoPending}>{photoPending ? "Uploading…" : selectedName ? `Upload ${selectedName}` : "Upload photo"}</button>
+    <button className={selectedName ? "button" : "button secondary"} disabled={photoPending || !selectedName}>{photoPending ? "Uploading…" : selectedName ? `Upload ${selectedName}` : "Choose or paste a photo first"}</button>
   </form>;
 }
 
