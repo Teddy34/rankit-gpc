@@ -21,7 +21,7 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
     {deleted && <div className="notice success"><strong>Game deleted</strong><span>The ranking and weekly trends have been recalculated.</span></div>}
     <section className="panel game-list"><div className="panel-heading"><h2>Results</h2><span>{history.length} games</span></div>
       {history.length === 0 ? <p className="empty-state">No games yet. Time to claim the table.</p> : history.map(({ game, one, two }) => <article className={currentUser.isAdmin ? "has-actions" : undefined} key={game.id}>
-        <time dateTime={game.playedOn}>{game.playedOn}</time>
+        <time dateTime={game.playedAtTime ? `${game.playedOn}T${game.playedAtTime}` : game.playedOn}>{game.playedOn}{game.playedAtTime ? ` ${game.playedAtTime}` : ""}</time>
         <span className={game.result === "player_one" ? "winner" : ""}><PlayerIcon player={one} className="avatar-inline" /> <strong>{one.displayName}</strong> <em>{game.playerOneDelta > 0 ? "+" : ""}{game.playerOneDelta}</em></span>
         <b>{game.result === "draw" ? "DRAW" : "VS"}</b>
         <span className={game.result === "player_two" ? "winner" : ""}><PlayerIcon player={two} className="avatar-inline" /> <strong>{two.displayName}</strong> <em>{game.playerTwoDelta > 0 ? "+" : ""}{game.playerTwoDelta}</em></span>

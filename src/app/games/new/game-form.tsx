@@ -6,7 +6,7 @@ import { PlayerIcon } from "../../player-icon";
 
 type Player = { id: number; displayName: string; avatar: string; avatarImageUrl: string | null; currentRating: number };
 
-export function GameForm({ players, today, defaultPlayerOneId }: { players: Player[]; today: string; defaultPlayerOneId?: number }) {
+export function GameForm({ players, today, now, defaultPlayerOneId }: { players: Player[]; today: string; now: string; defaultPlayerOneId?: number }) {
   const [state, action, pending] = useActionState(registerGame, {} as GameFormState);
   const initialPlayerOneId = players.some((player) => player.id === defaultPlayerOneId) ? defaultPlayerOneId : players[0]?.id;
   const [playerOneId, setPlayerOneId] = useState(String(initialPlayerOneId ?? ""));
@@ -40,7 +40,10 @@ export function GameForm({ players, today, defaultPlayerOneId }: { players: Play
         <label><input type="radio" name="result" value="draw" /><span>Draw</span></label>
         <label><input type="radio" name="result" value="player_two" /><span>Player two wins</span></label>
       </div></fieldset>
-      <label>Game date<input name="playedOn" type="date" max={today} defaultValue={today} required /></label>
+      <div className="form-grid">
+        <label>Game date<input name="playedOn" type="date" max={today} defaultValue={today} required /></label>
+        <label>Time<input name="playedAtTime" type="time" defaultValue={now} required /></label>
+      </div>
       {state.message && <p className="form-error" role="alert">{state.message}</p>}
       <button className="button" disabled={pending || players.length < 2}>{pending ? "Registering…" : "Register game"}</button>
     </form>

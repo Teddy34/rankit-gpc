@@ -63,6 +63,7 @@ export const games = sqliteTable("games", {
   playerTwoId: integer("player_two_id").notNull().references(() => users.id, { onDelete: "restrict" }),
   result: text("result", { enum: ["player_one", "player_two", "draw"] }).notNull(),
   playedOn: text("played_on").notNull(),
+  playedAtTime: text("played_at_time"),
   sequence: integer("sequence").notNull(),
   registeredBy: integer("registered_by").notNull().references(() => users.id, { onDelete: "restrict" }),
   playerOneDelta: integer("player_one_delta").notNull(),

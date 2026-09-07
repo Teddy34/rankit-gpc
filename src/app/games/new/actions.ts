@@ -16,6 +16,7 @@ export async function registerGame(_state: GameFormState, formData: FormData): P
   const playerTwoId = Number(formData.get("playerTwoId"));
   const result = String(formData.get("result"));
   const playedOn = String(formData.get("playedOn") ?? "");
+  const playedAtTime = String(formData.get("playedAtTime") ?? "");
 
   if (!Number.isInteger(playerOneId) || !Number.isInteger(playerTwoId) || playerOneId === playerTwoId) {
     return { message: "Choose two different players." };
@@ -26,6 +27,9 @@ export async function registerGame(_state: GameFormState, formData: FormData): P
     !Number.isNaN(parsedDate.valueOf()) && parsedDate.toISOString().slice(0, 10) === playedOn;
   if (!validDate || playedOn > todayInBrussels()) {
     return { message: "Enter a valid game date that is not in the future." };
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(playedAtTime)) {
+    return { message: "Enter a valid game time." };
   }
 
   const activePlayers = await db.select().from(users).where(and(isNull(users.retiredAt), isNull(users.deletedAt))).all();
@@ -38,7 +42,7 @@ export async function registerGame(_state: GameFormState, formData: FormData): P
     await tx.insert(games).values({
       playerOneId, playerTwoId,
       result: result as "player_one" | "player_two" | "draw",
-      playedOn, sequence, registeredBy: actor.id,
+      playedOn, playedAtTime, sequence, registeredBy: actor.id,
       playerOneDelta: 0, playerTwoDelta: 0,
     }).run();
 

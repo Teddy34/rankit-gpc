@@ -57,6 +57,13 @@
       "when": 1788280998605,
       "tag": "0007_colorful_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788766235526,
+      "tag": "0008_lucky_cardiac",
+      "breakpoints": true
     }
   ]
 }

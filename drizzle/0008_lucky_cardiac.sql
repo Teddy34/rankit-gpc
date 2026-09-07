@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `played_at_time` text;
