@@ -21,8 +21,9 @@ SQLite is the primary database. It is stored on a persistent local volume and ac
 - SQLite WAL mode is enabled.
 - Schema changes use versioned migrations.
 - Drizzle is the proposed database toolkit.
-- Automated database backups are required before production use.
 - The deployment must not run multiple application replicas against the SQLite file.
+- Backups are covered at the application level: an administrator-gated export/restore panel plus
+  a bearer-token endpoint an external system can poll for offsite copies. See `src/lib/backup.ts`.
 
 If future hosting requires ephemeral instances, horizontal scaling, or serverless execution, storage will need to move to a network-accessible database such as PostgreSQL.
 
@@ -40,7 +41,6 @@ Production deployment must provide:
 - application secrets and email credentials through environment variables or deployment secrets;
 - a restart policy;
 - a health check;
-- a backup destination outside the live application volume;
 - a single running application replica.
 
 ## Operational commands
@@ -51,12 +51,12 @@ At minimum, it will provide targets to:
 
 - build and start the application;
 - stop the application;
-- run database migrations;
-- create a consistent timestamped SQLite backup;
-- list available backups;
-- restore a selected backup with an explicit safety confirmation.
+- run database migrations.
 
-Daily backups are retained for seven days. Backup files must be written outside the live SQLite volume or copied to storage with an independent lifecycle.
+Backup and restore are administrator-facing application features rather than Make targets: an
+admin-only panel in `/admin` downloads a versioned JSON snapshot and restores from one (with a
+pre-restore safety copy and a typed confirmation), and `GET /api/backup` lets an external system
+pull the same snapshot on its own schedule using a bearer token, for offsite retention.
 
 ## Deliberate exclusions
 

@@ -210,6 +210,17 @@ fieldset { border: 0; padding: 8px 0; margin: 4px 0; }
 .audit-list summary { cursor: pointer; }
 .audit-list ul { margin: 7px 0 0; padding-left: 18px; line-height: 1.6; }
 .audit-pagination { padding: 15px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; color: var(--accent); font-size: 13px; }
+.backup-settings { margin-top: 22px; }
+.backup-settings .panel-heading > div { display: grid; gap: 3px; }
+.backup-settings .panel-heading .eyebrow { margin: 0; }
+.backup-downloads { padding: 20px 24px; display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border); }
+.backup-settings .secondary { background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); }
+.backup-restore-form { padding: 20px 24px 24px; display: grid; gap: 10px; }
+.backup-restore-form label { font-size: 14px; font-weight: 800; }
+.backup-restore-form input { width: 100%; padding: 13px 14px; background: var(--background); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font: inherit; }
+.backup-restore-form button { border: 0; font: inherit; cursor: pointer; }
+.backup-restore-form .danger { background: transparent; border: 1px solid #653b3b; color: #ff9d9d; }
+.backup-restore-form button:disabled { opacity: .55; cursor: default; }
 
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
@@ -227,5 +238,6 @@ fieldset { border: 0; padding: 8px 0; margin: 4px 0; }
   .terminal-header { border-right: 0; border-bottom: 1px solid #243027; }
   .terminal-header > span:not(.terminal-lights) { display: none; }
   .domain-add-form > div { flex-direction: column; }
+  .backup-downloads { flex-direction: column; }
   .audit-list article { padding: 14px; }
 }

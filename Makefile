@@ -1,4 +1,4 @@
-.PHONY: help install dev build test lint migrate up down logs backup backups restore admin unadmin
+.PHONY: help install dev build test lint migrate up down logs admin unadmin
 
 help:
 	@echo "install  Install dependencies"
@@ -10,9 +10,6 @@ help:
 	@echo "up       Build and start the production Compose service"
 	@echo "down     Stop the production Compose service"
 	@echo "logs     Follow production Compose logs"
-	@echo "backup   Create and verify a consistent SQLite backup"
-	@echo "backups  List available SQLite backups"
-	@echo 'restore  Restore safely: make restore BACKUP="file.sqlite" CONFIRM=restore'
 	@echo 'admin    Grant admin rights: make admin EMAIL="player@example.com"'
 	@echo 'unadmin  Revoke admin rights: make unadmin EMAIL="player@example.com"'
 
@@ -42,19 +39,6 @@ down:
 
 logs:
 	docker compose logs -f app
-
-backup:
-	npm run db:ops -- backup
-
-backups:
-	npm run db:ops -- list
-
-restore: export RESTORE_BACKUP := $(BACKUP)
-restore: export CONFIRM_RESTORE := $(CONFIRM)
-restore:
-	@test -n "$$RESTORE_BACKUP" || (echo 'Usage: make restore BACKUP="file.sqlite" CONFIRM=restore' && exit 2)
-	@test "$$CONFIRM_RESTORE" = "restore" || (echo 'Restore refused. Stop the app and add CONFIRM=restore' && exit 2)
-	npm run db:ops -- restore
 
 admin: export ADMIN_EMAIL := $(EMAIL)
 admin:

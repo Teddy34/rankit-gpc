@@ -9,6 +9,7 @@ import { AdminConsole } from "../admin-console";
 import { PlayerIcon } from "../player-icon";
 import { DomainWhitelist } from "./domain-whitelist";
 import { AuditLog } from "./audit-log";
+import { BackupPanel } from "./backup-panel";
 
 const AUDIT_PAGE_SIZE = 25;
 
@@ -60,6 +61,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       </section>
 
       <DomainWhitelist domains={removableDomains} lockedDomains={lockedDomains} />
+      <BackupPanel />
       <AuditLog entries={auditEntries} page={currentAuditPage} totalPages={totalAuditPages} />
     </main>
   );
