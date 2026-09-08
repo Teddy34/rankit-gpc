@@ -13,17 +13,17 @@ Status: Version 1.0.0 development
 - Persistent monthly bronze, silver, and gold leader awards
 - Administrator audit-log interface
 - libSQL migrations with local SQLite and remote Turso support
-- Local SQLite backup/list/restore Make commands with seven-day retention
 - Standalone Docker image and Docker Compose deployment
 - Automatic container-start database migrations
 - Database-aware `/api/health` health check
-- Separate Compose volumes for the live database and backups
+- Administrator database backup/restore: versioned JSON export and restore panel in `/admin`,
+  plus a bearer-token `GET /api/backup` endpoint for external/offsite pulls
 
 ## Remaining TODOs
 
 1. Test real Resend delivery end-to-end using the production hostname and verified sending domain.
 2. Add administrator game editing for date, players, and result, with audit logging and rating replay.
-3. Schedule daily `make backup` execution outside the application container.
+3. Optionally schedule an external system to poll `GET /api/backup` for offsite retention.
 4. Optionally schedule monthly award processing while retaining Ranking-page catch-up as a fallback.
 5. Add browser-level tests for authentication, game mutations, and administrator authorization.
 6. Complete production configuration for secrets, TLS proxying, external backup lifecycle, logging, and monitoring.
