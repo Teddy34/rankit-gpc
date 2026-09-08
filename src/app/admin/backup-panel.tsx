@@ -34,11 +34,12 @@ export function BackupPanel() {
     <div className="panel-heading"><div><p className="eyebrow">Administration</p><h2 id="backup-title">Backups</h2></div></div>
     <div className="backup-downloads">
       <a className="button secondary" href="/api/admin/backup">Download backup (JSON)</a>
+      <a className="button secondary" href="/api/admin/backup?format=zip">Download backup (zip)</a>
       <a className="button secondary" href="/api/admin/backup?format=gzip">Download backup (gzip)</a>
     </div>
     <form action={action} className="backup-restore-form">
-      <label htmlFor="backupFile">Restore from a backup file (JSON or gzip)</label>
-      <input ref={fileInputRef} id="backupFile" name="backupFile" type="file" accept="application/json,.json,.gz" required />
+      <label htmlFor="backupFile">Restore from a backup file (JSON, zip, or gzip)</label>
+      <input ref={fileInputRef} id="backupFile" name="backupFile" type="file" accept="application/json,.json,.zip,.gz" required />
       <label htmlFor="confirmationPhrase">Type RESTORE to confirm — this replaces all players, games, rating resets, awards, allowed domains, and the audit log, and signs everyone out</label>
       <input id="confirmationPhrase" name="confirmationPhrase" placeholder="RESTORE" autoComplete="off" required />
       <button className="button danger" disabled={pending}>{pending ? "Restoring…" : "Restore"}</button>

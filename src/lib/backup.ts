@@ -1,6 +1,7 @@
 import "server-only";
 
 import { gzipSync } from "node:zlib";
+import JSZip from "jszip";
 import { NextResponse } from "next/server";
 import { db, type Transaction } from "@/db";
 import { allowedDomains, auditLog, games, monthlyAwards, ratingResets, users } from "@/db/schema";
@@ -122,21 +123,37 @@ export function gzipEnvelope(envelope: BackupEnvelope): Buffer {
   return gzipSync(Buffer.from(serializeEnvelope(envelope), "utf-8"));
 }
 
-export function backupFilename(envelope: BackupEnvelope, extension: "json" | "json.gz"): string {
+/** Wraps the JSON envelope in a real .zip archive — unlike gzip, openable natively on any OS. */
+export async function zipEnvelope(envelope: BackupEnvelope): Promise<Buffer> {
+  const zip = new JSZip();
+  zip.file(backupFilename(envelope, "json"), serializeEnvelope(envelope));
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+}
+
+export function backupFilename(envelope: BackupEnvelope, extension: "json" | "json.gz" | "zip"): string {
   const stamp = envelope.generatedAt.replace(/[:.]/g, "-");
   return `rankit-backup-${stamp}.${extension}`;
 }
 
+export type BackupFormat = "json" | "gzip" | "zip";
+
+export function parseBackupFormat(value: string | null): BackupFormat {
+  return value === "gzip" || value === "zip" ? value : "json";
+}
+
 /** Shared response shape for both the admin-gated and bearer-token backup download routes. */
-export function backupDownloadResponse(envelope: BackupEnvelope, gzip: boolean): NextResponse {
-  const filename = backupFilename(envelope, gzip ? "json.gz" : "json");
-  const disposition = `attachment; filename="${filename}"`;
-  if (gzip) {
+export async function backupDownloadResponse(envelope: BackupEnvelope, format: BackupFormat): Promise<NextResponse> {
+  if (format === "gzip") {
     return new NextResponse(new Uint8Array(gzipEnvelope(envelope)), {
-      headers: { "content-type": "application/gzip", "content-disposition": disposition },
+      headers: { "content-type": "application/gzip", "content-disposition": `attachment; filename="${backupFilename(envelope, "json.gz")}"` },
+    });
+  }
+  if (format === "zip") {
+    return new NextResponse(new Uint8Array(await zipEnvelope(envelope)), {
+      headers: { "content-type": "application/zip", "content-disposition": `attachment; filename="${backupFilename(envelope, "zip")}"` },
     });
   }
   return new NextResponse(serializeEnvelope(envelope), {
-    headers: { "content-type": "application/json", "content-disposition": disposition },
+    headers: { "content-type": "application/json", "content-disposition": `attachment; filename="${backupFilename(envelope, "json")}"` },
   });
 }

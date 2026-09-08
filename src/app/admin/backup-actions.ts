@@ -1,6 +1,7 @@
 "use server";
 
 import { gunzipSync } from "node:zlib";
+import JSZip from "jszip";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { validateBackupPayload } from "@/domain/backup-validation";
@@ -15,9 +16,27 @@ export type RestoreState = {
 
 const CONFIRMATION_PHRASE = "RESTORE";
 const GZIP_MAGIC = [0x1f, 0x8b];
+// "PK" — every zip local-file-header, empty-archive, and spanned-archive signature starts with it.
+const ZIP_MAGIC = [0x50, 0x4b];
 
 function isGzip(buffer: Buffer): boolean {
   return buffer.length >= 2 && buffer[0] === GZIP_MAGIC[0] && buffer[1] === GZIP_MAGIC[1];
+}
+
+function isZip(buffer: Buffer): boolean {
+  return buffer.length >= 2 && buffer[0] === ZIP_MAGIC[0] && buffer[1] === ZIP_MAGIC[1];
+}
+
+/** Accepts plain JSON, a gzip of JSON, or a .zip archive containing one JSON file. */
+async function extractJsonText(buffer: Buffer): Promise<string> {
+  if (isGzip(buffer)) return gunzipSync(buffer).toString("utf-8");
+  if (isZip(buffer)) {
+    const zip = await JSZip.loadAsync(buffer);
+    const entry = Object.values(zip.files).find((file) => !file.dir);
+    if (!entry) throw new Error("The zip archive has no files in it.");
+    return entry.async("text");
+  }
+  return buffer.toString("utf-8");
 }
 
 export async function restoreBackupAction(_state: RestoreState, formData: FormData): Promise<RestoreState> {
@@ -33,10 +52,9 @@ export async function restoreBackupAction(_state: RestoreState, formData: FormDa
   const buffer = Buffer.from(await file.arrayBuffer());
   let raw: unknown;
   try {
-    const text = (isGzip(buffer) ? gunzipSync(buffer) : buffer).toString("utf-8");
-    raw = JSON.parse(text);
+    raw = JSON.parse(await extractJsonText(buffer));
   } catch {
-    return { status: "error", message: "That file isn't valid JSON (or a gzip of valid JSON)." };
+    return { status: "error", message: "That file isn't valid JSON (or a gzip or zip of valid JSON)." };
   }
 
   const validation = validateBackupPayload(raw);

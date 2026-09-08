@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { backupDownloadResponse, buildBackupEnvelope } from "@/lib/backup";
+import { backupDownloadResponse, buildBackupEnvelope, parseBackupFormat } from "@/lib/backup";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,6 @@ export async function GET(request: NextRequest) {
   }
 
   const envelope = await buildBackupEnvelope(db);
-  const gzip = new URL(request.url).searchParams.get("format") === "gzip";
-  return backupDownloadResponse(envelope, gzip);
+  const format = parseBackupFormat(new URL(request.url).searchParams.get("format"));
+  return backupDownloadResponse(envelope, format);
 }
