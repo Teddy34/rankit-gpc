@@ -33,8 +33,11 @@ h1 { margin: 0; font-size: clamp(36px, 7vw, 68px); line-height: .95; letter-spac
 .ranking-list li { min-height: 78px; padding: 12px 24px; display: grid; grid-template-columns: 40px 52px 1fr 80px 60px; align-items: center; gap: 12px; }
 .ranking-list li + li { border-top: 1px solid var(--border); }
 .rank, .trend { color: var(--muted); }
-.avatar { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 25px; object-fit: cover; }
-.avatar-inline { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 13px; object-fit: cover; vertical-align: -5px; }
+/* box-shadow (not border) so the ring doesn't eat into the 20px/46px box: a dark or
+   low-contrast custom photo can otherwise blend into the row/page background and read as an
+   unclipped square instead of a circle, even though the border-radius clip is correct. */
+.avatar { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 25px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); }
+.avatar-inline { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 13px; object-fit: cover; vertical-align: -5px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); }
 .player { display: grid; gap: 5px; }
 .player small { color: var(--muted); }
 .admin-badge { margin-left: 7px; color: var(--accent); font-size: 13px; vertical-align: 1px; }
