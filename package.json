@@ -10,7 +10,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "admin": "node --env-file-if-exists=.env.local --import tsx src/cli/admin.ts",
-    "db:ops": "node --env-file-if-exists=.env.local --import tsx src/cli/database.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env.local --import tsx src/db/migrate.ts"
   },
@@ -19,6 +18,7 @@
     "@vercel/blob": "^2.8.0",
     "better-sqlite3": "13.0.1",
     "drizzle-orm": "0.45.2",
+    "jszip": "^3.10.1",
     "next": "^16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",

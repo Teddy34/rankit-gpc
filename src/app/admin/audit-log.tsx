@@ -20,6 +20,8 @@ const actionLabels: Record<string, string> = {
   "administrator.revoked": "Revoked administrator rights",
   "domain.allowed": "Allowed an email domain",
   "domain.removed": "Removed an email domain",
+  "backup.taken": "Took a database backup",
+  "database.restored": "Restored the database from a backup",
 };
 
 function displayDetails(details: Record<string, unknown> | null): string[] {

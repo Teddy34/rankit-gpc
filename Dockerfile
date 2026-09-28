@@ -20,12 +20,11 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
     DATABASE_URL=/data/rankit.sqlite \
-    BACKUP_DIR=/backups \
     AUTO_MIGRATE_DATABASE=true
 
 RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nodejs nextjs \
-    && mkdir -p /data /backups \
-    && chown nextjs:nodejs /data /backups
+    && mkdir -p /data \
+    && chown nextjs:nodejs /data
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
