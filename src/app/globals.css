@@ -33,8 +33,11 @@ h1 { margin: 0; font-size: clamp(36px, 7vw, 68px); line-height: .95; letter-spac
 .ranking-list li { min-height: 78px; padding: 12px 24px; display: grid; grid-template-columns: 40px 52px 1fr 80px 60px; align-items: center; gap: 12px; }
 .ranking-list li + li { border-top: 1px solid var(--border); }
 .rank, .trend { color: var(--muted); }
-.avatar { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 25px; object-fit: cover; }
-.avatar-inline { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 13px; object-fit: cover; vertical-align: -5px; }
+/* box-shadow (not border) so the ring doesn't eat into the 20px/46px box: a dark or
+   low-contrast custom photo can otherwise blend into the row/page background and read as an
+   unclipped square instead of a circle, even though the border-radius clip is correct. */
+.avatar { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 25px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); }
+.avatar-inline { width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font-size: 13px; object-fit: cover; vertical-align: -5px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); }
 .player { display: grid; gap: 5px; }
 .player small { color: var(--muted); }
 .admin-badge { margin-left: 7px; color: var(--accent); font-size: 13px; vertical-align: 1px; }
@@ -51,7 +54,8 @@ h1 { margin: 0; font-size: clamp(36px, 7vw, 68px); line-height: .95; letter-spac
 .player-filters label + label { border-top: 1px solid var(--border); }
 .player-filters input { accent-color: var(--accent); }
 .player-filters i { width: 9px; height: 9px; border-radius: 50%; }
-.player-filters span { min-width: 0; font-size: 13px; font-style: normal; font-weight: 800; overflow-wrap: anywhere; }
+/* label > span, same reasoning as .player-picker label > span above. */
+.player-filters label > span { min-width: 0; font-size: 13px; font-style: normal; font-weight: 800; overflow-wrap: anywhere; }
 .player-filters small { margin-top: 3px; display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
 .chart-scroll { padding: 12px; overflow-x: auto; }
 .chart-scroll svg { width: 100%; min-width: 660px; display: block; }
@@ -111,7 +115,10 @@ fieldset { border: 0; padding: 8px 0; margin: 4px 0; }
 .player-picker input { position: absolute; opacity: 0; pointer-events: none; }
 .player-picker label { display: block; cursor: pointer; }
 .player-picker label + label { border-top: 1px solid var(--border); }
-.player-picker span { padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; }
+/* label > span (not the bare descendant selector) so this doesn't also match the nested
+   .avatar-inline <span> used for emoji fallbacks -- that accidentally out-specificities
+   .avatar-inline's own display/font-size and stretches the circle into a 28x20 oval. */
+.player-picker label > span { padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; }
 .player-picker input:checked + span { background: #27351c; color: var(--accent); }
 .result-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 10px; }
 .result-picker input { position: absolute; opacity: 0; pointer-events: none; }

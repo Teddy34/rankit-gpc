@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone output is only for the self-hosted Docker build; Vercel does
+  // its own file tracing/bundling and this mode breaks its build step.
+  output: process.env.VERCEL ? undefined : "standalone",
   experimental: {
     serverActions: {
       // Vercel caps every serverless function's request body at 4.5MB, hard — this can only be
